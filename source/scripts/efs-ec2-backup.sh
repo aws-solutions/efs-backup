@@ -32,8 +32,13 @@ echo "_folder_label: ${_folder_label}"
 echo "_backup_prefix: ${_backup_prefix}"
 
 #
-# get region and instance-id from instance meta-data
+# get vpc-dns, region and instance-id from instance meta-data
 #
+_mac=$(curl http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
+_vpc_cidr=$(curl http://169.254.169.254/latest/meta-data/network/interfaces/macs/${_mac}vpc-ipv4-cidr-block)
+_vpc_net="${_vpc_cidr%%/*}"
+_vpc_base="$(echo "$_vpc_net" | cut -d"." -f1-3)"
+_vpc_dns="$_vpc_base"'.2'
 _az=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone/)
 _region=${_az::-1}
 echo "region is ${_region}"
@@ -45,18 +50,18 @@ echo "instance-id is ${_instance_id}"
 # parameters : [_source_efs, _region]
 #
 echo "-- $(date -u +%FT%T) -- getting efs mount IPs"
-until dig ${_source_efs}.efs.${_region}.amazonaws.com +short
+until dig @${_vpc_dns} ${_source_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
 done
-_src_mount_ip=$(dig ${_source_efs}.efs.${_region}.amazonaws.com +short)
+_src_mount_ip=$(dig @${_vpc_dns} ${_source_efs}.efs.${_region}.amazonaws.com +short)
 echo "-- $(date -u +%FT%T) -- src mount ip: ${_src_mount_ip}"
 
-until dig ${_destination_efs}.efs.${_region}.amazonaws.com +short
+until dig @${_vpc_dns} ${_destination_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
 done
-_dst_mount_ip=$(dig ${_destination_efs}.efs.${_region}.amazonaws.com +short)
+_dst_mount_ip=$(dig @${_vpc_dns} ${_destination_efs}.efs.${_region}.amazonaws.com +short)
 echo "-- $(date -u +%FT%T) -- dst mount ip: ${_dst_mount_ip}"
 
 if [ -z "${_src_mount_ip}" ] || [ -z "${_dst_mount_ip}" ]; then
