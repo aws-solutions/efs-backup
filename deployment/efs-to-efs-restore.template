@@ -15,9 +15,9 @@ Parameters:
     Description: Source EFS Id
     Type: String
 
-  # Destination EFS from where restore will be performed
+  # Destination EFS to where restore will be performed
   DstEFS:
-    Description: Backup EFS Id
+    Description: Destination EFS Id
     Type: String
 
   # Interval tag which you want to restore
@@ -117,7 +117,7 @@ Metadata:
       IntervalTag:
         default: Interval Label
       DstEFS:
-        default: Backup EFS
+        default: Destination EFS
       Subnets:
         default: Subnet IDs
       SrcEFS:
