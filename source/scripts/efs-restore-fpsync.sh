@@ -38,8 +38,8 @@ sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 
 echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/destination"
 sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/destination
 
-if [ ! sudo test -d /mnt/backups/$efsid/$interval.$backupNum/ ]; then
-  echo "EFS Backup $efsid/$interval.$backupNum does not exist!"
+if sudo test ! -d "/mnt/backups/$efsid/$interval.$backupNum/"; then
+  echo "EFS Backup /mnt/backups/$efsid/$interval.$backupNum/ does not exist!"
   exit 1
 fi
 
