@@ -2,9 +2,9 @@
 #
 #========================================================================
 #
-# master script to run efs-backup
+# master script to run efs-restore-fpsync
 # fetches EFS mount IPs
-# runs efs-backup scripts
+# runs efs-restore scripts
 # uploads logs to S3
 # updates status on DynamoDB
 #
@@ -13,7 +13,7 @@
 
 
 clear
-echo "This is the master script to perform efs backup"
+echo "This is the master script to perform efs restore"
 sleep 2
 
 _source_efs=$1 ## {type:string, description:source efs id}
@@ -38,18 +38,19 @@ echo "_sns_topic: ${_sns_topic}"
 #
 # get region from instance meta-data
 #
-_az=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone/)
+_az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/)
 _region=${_az::-1}
 echo "region is ${_region}"
-_instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+_instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 echo "instance-id is ${_instance_id}"
-_instance_type=$(curl http://169.254.169.254/latest/meta-data/instance-type/)
+_instance_type=$(curl -s http://169.254.169.254/latest/meta-data/instance-type/)
 echo "instance-type is ${_instance_type}"
 
 #
 # getting source/destination efs mount ip
 # parameters : [_source_efs, _region]
 #
+echo "-- $(date -u +%FT%T) -- resolving source address ${_source_efs}.efs.${_region}.amazonaws.com"
 until dig ${_source_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
@@ -57,6 +58,7 @@ done
 _src_mount_ip=$(dig ${_source_efs}.efs.${_region}.amazonaws.com +short)
 echo "-- $(date -u +%FT%T) -- src mount ip: ${_src_mount_ip}"
 
+echo "-- $(date -u +%FT%T) -- resolving destination address ${_destination_efs}.efs.${_region}.amazonaws.com"
 until dig ${_destination_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
@@ -66,13 +68,13 @@ echo "-- $(date -u +%FT%T) -- dst mount ip: ${_dst_mount_ip}"
 
 if [ -z "${_src_mount_ip}" ] || [ -z "${_dst_mount_ip}" ]; then
   echo "-- $(date -u +%FT%T) -- ERROR:efs_mount_ip_not_found"
-  echo "-- $(date -u +%FT%T) -- Either or both mount IPs not found, skipping EFS backup script. Please verify if the EC2 instance was launched in the same AZ as the EFS systems."
+  echo "-- $(date -u +%FT%T) -- Either or both mount IPs not found, skipping EFS restore script. Please verify if the EC2 instance was launched in the same AZ as the EFS systems."
   echo "-- $(date -u +%FT%T) -- Notify customer of failure"
   aws sns publish --region ${_region} \
   --topic-arn ${_sns_topic} \
   --message '{
     SourceEFS:'${_source_efs}',
-    BackupEFS:'${_destination_efs}',
+    DestinationEFS:'${_destination_efs}',
     Interval:'${_interval}',
     BackupNum:'${_backup_num}',
     FolderLabel:'${_folder_label}',
@@ -151,7 +153,7 @@ else
     --topic-arn ${_sns_topic} \
     --message '{
      SourceEFS:'${_source_efs}',
-     BackupEFS:'${_destination_efs}',
+     DestinationEFS:'${_destination_efs}',
      Interval:'${_interval}',
      BackupNum:'${_backup_num}',
      FolderLabel:'${_folder_label}',
@@ -167,7 +169,7 @@ else
     --topic-arn ${_sns_topic} \
     --message '{
      SourceEFS:'${_source_efs}',
-     BackupEFS:'${_destination_efs}',
+     DestinationEFS:'${_destination_efs}',
      Interval:'${_interval}',
      BackupNum:'${_backup_num}',
      FolderLabel:'${_folder_label}',
