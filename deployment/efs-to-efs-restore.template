@@ -66,10 +66,14 @@ Parameters:
 
   # List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets
   Subnets:
-    Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets(Choose 2)
+    Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2)
     Type: List<AWS::EC2::Subnet::Id>
     ConstraintDescription: must specify subnets in different AZs
 
+  SecurityGroupId:
+    Description: The ID of an existing EC2 SecurityGroup in your Virtual Private Cloud (VPC), which should provide access to your existing EFS
+    Type: AWS::EC2::SecurityGroup::Id
+  
   # Bucket where restore logs will be saved
   RestoreLogBucket:
     Description: Bucket to store restore logs (use the same bucket as Backup)
@@ -82,7 +86,7 @@ Parameters:
 
   # CW Dashboard
   Dashboard:
-    Description: Do you want dashoard for your metrics?
+    Description: Do you want dashboard for your metrics?
     Type: String
     AllowedValues:
       - "Yes"
@@ -108,6 +112,7 @@ Metadata:
           - InstanceSize
           - Subnets
           - VpcId
+          - SecurityGroupId
       - Label:
           default: Notification & Dashboard
         Parameters:
@@ -132,6 +137,8 @@ Metadata:
         default: Instance Size
       VpcId:
         default: VPC ID
+      SecurityGroupId:
+        default: Security Group ID
       RestoreLogBucket:
         default: Restore Log Bucket
 
@@ -188,6 +195,7 @@ Resources:
       ImageId: !GetAtt AMIInfo.Id
       SecurityGroups:
         - !Sub ${EFSSecurityGroup}
+        - !Ref SecurityGroupId
       InstanceType: !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize]
       IamInstanceProfile: !Sub ${InstanceProfile}
       UserData:
