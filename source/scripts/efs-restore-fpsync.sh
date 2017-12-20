@@ -29,14 +29,14 @@ sudo make install
 PATH=$PATH:/usr/local/bin
 
 
-echo '-- $(date -u +%FT%T) -- sudo mkdir /backup'
-sudo mkdir /backup
-echo '-- $(date -u +%FT%T) -- sudo mkdir /mnt/backups'
-sudo mkdir /mnt/backups
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups
+echo "-- $(date -u +%FT%T) -- sudo mkdir -p /mnt/destination"
+sudo mkdir -p /mnt/destination
+echo "-- $(date -u +%FT%T) -- sudo mkdir -p /mnt/backups"
+sudo mkdir -p /mnt/backups
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /mnt/backups"
+sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /mnt/backups
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/destination"
+sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/destination
 
 if [ ! sudo test -d /mnt/backups/$efsid/$interval.$backupNum/ ]; then
   echo "EFS Backup $efsid/$interval.$backupNum does not exist!"
@@ -70,14 +70,14 @@ fi
 
 # running fpsync in reverse direction to restore
 echo "fpsync_start:$(date -u +%FT%T)"
-echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum/ /backup/"
-sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-restore.log" /mnt/backups/$efsid/$interval.$backupNum/ /backup/
+echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/destination/"
+sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-restore.log" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/destination/
 fpsyncStatus=$?
 echo "fpsync_stop:$(date -u +%FT%T)"
 
 echo "rsync_delete_start:$(date -u +%FT%T)"
-echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-backup-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /backup/"
-sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-backup-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /backup/
+echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-backup-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/destination/"
+sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-backup-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/destination/
 
 echo "rsync_delete_stop:$(date -u +%FT%T)"
 
