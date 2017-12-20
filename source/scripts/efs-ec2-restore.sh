@@ -38,12 +38,12 @@ echo "_sns_topic: ${_sns_topic}"
 #
 # get region from instance meta-data
 #
-_az=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone/)
+_az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/)
 _region=${_az::-1}
 echo "region is ${_region}"
-_instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+_instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 echo "instance-id is ${_instance_id}"
-_instance_type=$(curl http://169.254.169.254/latest/meta-data/instance-type/)
+_instance_type=$(curl -s http://169.254.169.254/latest/meta-data/instance-type/)
 echo "instance-type is ${_instance_type}"
 
 #
