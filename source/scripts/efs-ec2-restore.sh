@@ -50,6 +50,7 @@ echo "instance-type is ${_instance_type}"
 # getting source/destination efs mount ip
 # parameters : [_source_efs, _region]
 #
+echo "-- $(date -u +%FT%T) -- resolving source address ${_source_efs}.efs.${_region}.amazonaws.com"
 until dig ${_source_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
@@ -57,6 +58,7 @@ done
 _src_mount_ip=$(dig ${_source_efs}.efs.${_region}.amazonaws.com +short)
 echo "-- $(date -u +%FT%T) -- src mount ip: ${_src_mount_ip}"
 
+echo "-- $(date -u +%FT%T) -- resolving destination address ${_destination_efs}.efs.${_region}.amazonaws.com"
 until dig ${_destination_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1

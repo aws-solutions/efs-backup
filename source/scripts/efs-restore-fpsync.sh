@@ -28,6 +28,8 @@ sudo make install
 # Adding PATH
 PATH=$PATH:/usr/local/bin
 
+_security_groups=$(curl -s http://169.254.169.254/latest/meta-data/security-groups/ | tr '\n' ',')
+echo "-- $(date -u +%FT%T) -- Security Groups: ${_security_groups}"
 
 echo "-- $(date -u +%FT%T) -- sudo mkdir -p /mnt/destination"
 sudo mkdir -p /mnt/destination
