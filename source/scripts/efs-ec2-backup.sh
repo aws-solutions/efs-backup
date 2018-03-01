@@ -11,8 +11,30 @@
 #========================================================================
 # author: aws-solutions-builder@
 
+function cleanup {
+  # Fetch instance IAM role credentials (should be automatically injected but doesn't seem to work during cloud-init)
+  sudo yum install -y jq
+  ROLE_IAM=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+  CREDENTIAL_JSON=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${ROLE_IAM})
+  STATUS=$(echo "${CREDENTIAL_JSON}" | jq -r .Code)
+  echo "Got status [${STATUS}] when fetching credentials"
+  export AWS_ACCESS_KEY_ID=$(echo "${CREDENTIAL_JSON}" | jq -r .AccessKeyId)
+  export AWS_SECRET_ACCESS_KEY=$(echo "${CREDENTIAL_JSON}" | jq -r .SecretAccessKey)
+
+  #
+  # changing auto scaling capacity
+  # parameters : [_asg_name]
+  #
+  echo "-- $(date -u +%FT%T) -- Backup script finished before the backup window, stopping the ec2 instance."
+  _asg_name=$(aws ec2 describe-tags --region ${_region} --filters "Name=resource-id,Values=${_instance_id}" --query 'Tags[?Key==`aws:autoscaling:groupName`]'.Value --output text)
+  aws autoscaling set-desired-capacity --region ${_region} --auto-scaling-group-name ${_asg_name} --desired-capacity 0
+}
 
 clear
+set -e # Fail on error
+# See: http://fvue.nl/wiki/Bash:_Error_handling#Executed_in_subshell.2C_trap_on_exit
+trap cleanup 1 2 3 15 ERR # Always clean up even if there is an error
+
 echo "This is the master script to perform efs backup"
 sleep 2
 
@@ -72,22 +94,7 @@ else
   echo "-- $(date -u +%FT%T) -- running EFS backup script"
   # _timeout_val=$(((${_backup_window}-1)*60)) # timeout 1 minute less than given window -> timeout in SSM
   # timeout --preserve-status --signal=2 ${_timeout_val} ./efs-backup-fpsync.sh ${_src_mount_ip}:/ ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
-  /home/ec2-user/efs-backup-fpsync.sh ${_src_mount_ip}:${_backup_prefix} ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
+  /home/ec2-user/efs-backup-fpsync.sh ${_src_mount_ip}:${_backup_prefix} ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label} || false
 fi
 
-# Fetch instance IAM role credentials (should be automatically injected but doesn't seem to work during cloud-init)
-sudo yum install -y jq
-ROLE_IAM=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
-CREDENTIAL_JSON=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${ROLE_IAM})
-STATUS=$(echo "${CREDENTIAL_JSON}" | jq -r .Code)
-echo "Got status [${STATUS}] when fetching credentials"
-export AWS_ACCESS_KEY_ID=$(echo "${CREDENTIAL_JSON}" | jq -r .AccessKeyId)
-export AWS_SECRET_ACCESS_KEY=$(echo "${CREDENTIAL_JSON}" | jq -r .SecretAccessKey)
-
-#
-# changing auto scaling capacity
-# parameters : [_asg_name]
-#
-echo "-- $(date -u +%FT%T) -- Backup script finished before the backup window, stopping the ec2 instance."
-_asg_name=$(aws ec2 describe-tags --region ${_region} --filters "Name=resource-id,Values=${_instance_id}" --query 'Tags[?Key==`aws:autoscaling:groupName`]'.Value --output text)
-aws autoscaling set-desired-capacity --region ${_region} --auto-scaling-group-name ${_asg_name} --desired-capacity 0
+cleanup
