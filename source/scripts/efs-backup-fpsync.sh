@@ -124,4 +124,4 @@ echo "Stating backup....."
 echo "-- $(date -u +%FT%T) --  sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -o \"-a --stats --numeric-ids --log-file=/tmp/efs-backup.log\" /backup/ /mnt/backups/$efsid/$interval.0/"
 sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-backup.log" /backup/ /mnt/backups/$efsid/$interval.0/ 1>/tmp/efs-fpsync.log
 fpsyncStatus=$?
-exit $fpsyncStatus
+echo "fpsync exit code was: [$fpsyncStatus]"
