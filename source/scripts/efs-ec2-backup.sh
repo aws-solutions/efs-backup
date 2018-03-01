@@ -75,6 +75,14 @@ else
   /home/ec2-user/efs-backup-fpsync.sh ${_src_mount_ip}:${_backup_prefix} ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
 fi
 
+# Fetch instance IAM role credentials (should be automatically injected but doesn't seem to work during cloud-init)
+sudo yum install -y jq
+ROLE_IAM=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+CREDENTIAL_JSON=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials/${ROLE_IAM})
+STATUS=$(echo "${CREDENTIAL_JSON}" | jq -r .Code)
+echo "Got status [${STATUS}] when fetching credentials"
+export AWS_ACCESS_KEY_ID=$(echo "${CREDENTIAL_JSON}" | jq -r .AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(echo "${CREDENTIAL_JSON}" | jq -r .SecretAccessKey)
 
 #
 # changing auto scaling capacity
