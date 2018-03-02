@@ -90,7 +90,7 @@ if [ ! -d /mnt/backups/$efsid ]; then
 fi
 
 echo "-- $(date -u +%FT%T) --  sudo rm /tmp/efs-backup.log"
-sudo rm /tmp/efs-backup.log
+sudo rm -f /tmp/efs-backup.log
 
 # ECU Count per instance
 # c4.large = 8
