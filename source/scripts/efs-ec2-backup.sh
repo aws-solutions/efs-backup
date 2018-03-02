@@ -17,7 +17,7 @@ function cleanup {
   ROLE_IAM=$(curl --show-error --fail http://169.254.169.254/latest/meta-data/iam/security-credentials/)
   CREDENTIAL_JSON=$(curl --show-error --fail http://169.254.169.254/latest/meta-data/iam/security-credentials/${ROLE_IAM})
   STATUS=$(echo "${CREDENTIAL_JSON}" | jq -r .Code)
-  echo "Got status [${STATUS}] when fetching credentials"
+  echo "-- $(date -u +%FT%T) -- Got status [${STATUS}] when fetching credentials"
   export AWS_ACCESS_KEY_ID=$(echo "${CREDENTIAL_JSON}" | jq -r .AccessKeyId)
   export AWS_SECRET_ACCESS_KEY=$(echo "${CREDENTIAL_JSON}" | jq -r .SecretAccessKey)
 
