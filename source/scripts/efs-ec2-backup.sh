@@ -92,8 +92,6 @@ else
   # parameters : [_src_mount_ip, _dst_mount_ip, _interval, _retain, _folder_label, _backup_window]
   #
   echo "-- $(date -u +%FT%T) -- running EFS backup script"
-  # _timeout_val=$(((${_backup_window}-1)*60)) # timeout 1 minute less than given window -> timeout in SSM
-  # timeout --preserve-status --signal=2 ${_timeout_val} ./efs-backup-fpsync.sh ${_src_mount_ip}:/ ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
   /home/ec2-user/efs-backup-fpsync.sh ${_src_mount_ip}:${_backup_prefix} ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label} || false
 fi
 
