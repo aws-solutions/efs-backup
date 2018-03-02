@@ -21,7 +21,6 @@ interval=$3
 retain=$4
 efsid=$5
 
-
 echo "## input from user ##"
 echo "source: ${source}"
 echo "destination: ${destination}"
@@ -89,12 +88,7 @@ if [ ! -d /mnt/backups/$efsid ]; then
   echo "-- $(date -u +%FT%T) --  sudo chmod 700 /mnt/backups/$efsid"
   sudo chmod 700 /mnt/backups/$efsid
 fi
-# if [ ! -d /mnt/backups/efsbackup-logs ]; then
-#   echo "-- $(date -u +%FT%T) --  sudo mkdir -p /mnt/backups/efsbackup-logs"
-#   sudo mkdir -p /mnt/backups/efsbackup-logs
-#   echo "-- $(date -u +%FT%T) --  sudo chmod 700 /mnt/backups/efsbackup-logs"
-#   sudo chmod 700 /mnt/backups/efsbackup-logs
-# fi
+
 echo "-- $(date -u +%FT%T) --  sudo rm /tmp/efs-backup.log"
 sudo rm /tmp/efs-backup.log
 
@@ -125,4 +119,4 @@ echo "Stating backup....."
 echo "-- $(date -u +%FT%T) --  sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -o \"-a --stats --numeric-ids --log-file=/tmp/efs-backup.log\" /backup/ /mnt/backups/$efsid/$interval.0/"
 sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-backup.log" /backup/ /mnt/backups/$efsid/$interval.0/ 1>/tmp/efs-fpsync.log
 fpsyncStatus=$?
-echo "fpsync exit code was: [$fpsyncStatus]"
+echo "-- $(date -u +%FT%T) --  fpsync exit code was: [$fpsyncStatus]"
