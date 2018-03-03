@@ -34,17 +34,18 @@ echo "_backup_prefix: ${_backup_prefix}"
 #
 # get region and instance-id from instance meta-data
 #
-_az=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone/)
+_az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/)
 _region=${_az::-1}
 echo "region is ${_region}"
-_instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+_instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 echo "instance-id is ${_instance_id}"
 
 #
 # getting source/destination efs mount ip
-# parameters : [_source_efs, _region]
+# parameters : [_source_efs, _destination_efs, _region]
 #
-echo "-- $(date -u +%FT%T) -- getting efs mount IPs"
+
+echo "-- $(date -u +%FT%T) -- resolving source efs address ${_source_efs}.efs.${_region}.amazonaws.com"
 until dig ${_source_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
@@ -52,6 +53,7 @@ done
 _src_mount_ip=$(dig ${_source_efs}.efs.${_region}.amazonaws.com +short)
 echo "-- $(date -u +%FT%T) -- src mount ip: ${_src_mount_ip}"
 
+echo "-- $(date -u +%FT%T) -- resolving backup efs address ${_destination_efs}.efs.${_region}.amazonaws.com"
 until dig ${_destination_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1

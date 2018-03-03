@@ -2,9 +2,9 @@
 #
 #========================================================================
 #
-# master script to run efs-backup
+# master script to run efs-restore-fpsync
 # fetches EFS mount IPs
-# runs efs-backup scripts
+# runs efs-restore scripts
 # uploads logs to S3
 # updates status on DynamoDB
 #
@@ -13,11 +13,11 @@
 
 
 clear
-echo "This is the master script to perform efs backup"
+echo "This is the master script to perform efs restore"
 sleep 2
 
 _source_efs=$1 ## {type:string, description:source efs id}
-_destination_efs=$2 ## {type:string, description:destination efs id}
+_backup_efs=$2 ## {type:string, description:backup efs id}
 _interval=$3 ## {type:string, description:interval for backup daily/weekly/monthly}
 _backup_num=$4 ## {type:number, description:backup number to restore}
 _folder_label=$5 ## {type:string, description:backup identifier}
@@ -27,7 +27,7 @@ _sns_topic=$8 ## {type:string, description:sns topic arn for restore notificatio
 
 echo "## input from user ##"
 echo "_source_efs: ${_source_efs}"
-echo "_destination_efs: ${_destination_efs}"
+echo "_backup_efs: ${_backup_efs}"
 echo "_interval: ${_interval}"
 echo "_backup_num: ${_backup_num}"
 echo "_folder_label: ${_folder_label}"
@@ -38,18 +38,19 @@ echo "_sns_topic: ${_sns_topic}"
 #
 # get region from instance meta-data
 #
-_az=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone/)
+_az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/)
 _region=${_az::-1}
 echo "region is ${_region}"
-_instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+_instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 echo "instance-id is ${_instance_id}"
-_instance_type=$(curl http://169.254.169.254/latest/meta-data/instance-type/)
+_instance_type=$(curl -s http://169.254.169.254/latest/meta-data/instance-type/)
 echo "instance-type is ${_instance_type}"
 
 #
-# getting source/destination efs mount ip
+# getting source/backup efs mount ip
 # parameters : [_source_efs, _region]
 #
+echo "-- $(date -u +%FT%T) -- resolving source efs address ${_source_efs}.efs.${_region}.amazonaws.com"
 until dig ${_source_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
@@ -57,39 +58,40 @@ done
 _src_mount_ip=$(dig ${_source_efs}.efs.${_region}.amazonaws.com +short)
 echo "-- $(date -u +%FT%T) -- src mount ip: ${_src_mount_ip}"
 
-until dig ${_destination_efs}.efs.${_region}.amazonaws.com +short
+echo "-- $(date -u +%FT%T) -- resolving backup efs address ${_backup_efs}.efs.${_region}.amazonaws.com"
+until dig ${_backup_efs}.efs.${_region}.amazonaws.com +short
 do
   sleep 1
 done
-_dst_mount_ip=$(dig ${_destination_efs}.efs.${_region}.amazonaws.com +short)
-echo "-- $(date -u +%FT%T) -- dst mount ip: ${_dst_mount_ip}"
+_backup_mount_ip=$(dig ${_backup_efs}.efs.${_region}.amazonaws.com +short)
+echo "-- $(date -u +%FT%T) -- backup mount ip: ${_backup_mount_ip}"
 
-if [ -z "${_src_mount_ip}" ] || [ -z "${_dst_mount_ip}" ]; then
+if [ -z "${_src_mount_ip}" ] || [ -z "${_backup_mount_ip}" ]; then
   echo "-- $(date -u +%FT%T) -- ERROR:efs_mount_ip_not_found"
-  echo "-- $(date -u +%FT%T) -- Either or both mount IPs not found, skipping EFS backup script. Please verify if the EC2 instance was launched in the same AZ as the EFS systems."
+  echo "-- $(date -u +%FT%T) -- Either or both mount IPs not found, skipping EFS restore script. Please verify if the EC2 instance was launched in the same AZ as the EFS systems."
   echo "-- $(date -u +%FT%T) -- Notify customer of failure"
   aws sns publish --region ${_region} \
   --topic-arn ${_sns_topic} \
   --message '{
     SourceEFS:'${_source_efs}',
-    BackupEFS:'${_destination_efs}',
+    BackupEFS:'${_backup_efs}',
     Interval:'${_interval}',
     BackupNum:'${_backup_num}',
     FolderLabel:'${_folder_label}',
     SourcePrefix:'${_src_prefix}',
     LogBucket:'${_s3bucket}',
-    RestoreStatus:Unable to find the mount IP address of either source or destination EFS. Please verify if the EC2 instance was launched in the same AZ as the EFS systems. Terminating instance.
+    RestoreStatus:Unable to find the mount IP address of either source or backup EFS. Please verify if the EC2 instance was launched in the same AZ as the EFS systems. Terminating instance.
   }'
 else
   #
   # running efs restore script
-  # parameters : [_src_mount_ip, _dst_mount_ip, _interval, _retain, _folder_label, _backup_window]
+  # parameters : [_src_mount_ip, _backup_mount_ip, _interval, _retain, _folder_label, _backup_window]
   #
   echo "-- $(date -u +%FT%T) -- running efs restore script"
   _restore_start_time=$(date -u +%FT%T)
   # _timeout_val=$(((${_backup_window}-1)*60)) # timeout 1 minute less than given window -> timeout in SSM
-  # timeout --preserve-status --signal=2 ${_timeout_val} ./efs-backup-fpsync.sh ${_src_mount_ip}:/ ${_dst_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
-  /home/ec2-user/efs-restore-fpsync.sh ${_src_mount_ip}:${_src_prefix} ${_dst_mount_ip}:/ ${_interval} ${_backup_num} ${_folder_label} ${_s3bucket}
+  # timeout --preserve-status --signal=2 ${_timeout_val} ./efs-backup-fpsync.sh ${_src_mount_ip}:/ ${_backup_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
+  /home/ec2-user/efs-restore-fpsync.sh ${_src_mount_ip}:${_src_prefix} ${_backup_mount_ip}:/ ${_interval} ${_backup_num} ${_folder_label} ${_s3bucket}
   restoreStatus=$?
   _restore_stop_time=$(date -u +%FT%T)
   echo "-- $(date -u +%FT%T) -- fpsync finished with status: $restoreStatus"
@@ -143,7 +145,7 @@ else
 
   #
   # notify customer with restore status
-  # parameters : [_sns_topic, _source_efs, _destination_efs, _interval, _backup_num, _folder_label, _src_prefix, _s3bucket]
+  # parameters : [_sns_topic, _source_efs, _backup_efs, _interval, _backup_num, _folder_label, _src_prefix, _s3bucket]
   #
   if [ "${restoreStatus}" == "0" ]; then
     echo "-- $(date -u +%FT%T) -- notify customer of success"
@@ -151,7 +153,7 @@ else
     --topic-arn ${_sns_topic} \
     --message '{
      SourceEFS:'${_source_efs}',
-     BackupEFS:'${_destination_efs}',
+     BackupEFS:'${_backup_efs}',
      Interval:'${_interval}',
      BackupNum:'${_backup_num}',
      FolderLabel:'${_folder_label}',
@@ -167,7 +169,7 @@ else
     --topic-arn ${_sns_topic} \
     --message '{
      SourceEFS:'${_source_efs}',
-     BackupEFS:'${_destination_efs}',
+     BackupEFS:'${_backup_efs}',
      Interval:'${_interval}',
      BackupNum:'${_backup_num}',
      FolderLabel:'${_folder_label}',

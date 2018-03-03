@@ -150,7 +150,7 @@ Code Bucket Name:
 
 ***
 
-Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
 
