@@ -18,7 +18,7 @@ Parameters:
   # It will be attached to the backup instance
   InstanceSG:
     Description: The ID of a security group that allows access the source EFS fs
-    Type: String
+    Type: AWS::EC2::SecurityGroup::Id
 
   # Will be added to the EC2 instance
   InstanceKeyPair:
