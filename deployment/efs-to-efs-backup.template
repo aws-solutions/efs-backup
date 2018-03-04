@@ -15,6 +15,11 @@ Parameters:
     Description: Source EFS Id
     Type: String
 
+  # It will be attached to the backup instance
+  InstanceSG:
+    Description: The ID of a security group that allows access the source EFS fs
+    Type: String
+
   # Interval tag for your backups; daily, weekly, monthly
   IntervalTag:
     Description: Interval label to identify backups
@@ -127,6 +132,7 @@ Metadata:
           default: Backup Configuration
         Parameters:
           - SrcEFS
+          - InstanceSG
           - IntervalTag
           - Retain
           - FolderLabel
@@ -154,6 +160,8 @@ Metadata:
         default: Subnet IDs
       SrcEFS:
         default: Source EFS
+      InstanceSG:
+        default: Backup instance security group ID
       FolderLabel:
         default: Folder Label
       InstanceSize:
@@ -257,6 +265,7 @@ Resources:
       ImageId: !GetAtt AMIInfo.Id
       SecurityGroups:
         - !Sub ${EFSSecurityGroup}
+        - !Sub ${InstanceSG}
       InstanceType: !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize]
       IamInstanceProfile: !Sub ${InstanceProfile}
       UserData:
