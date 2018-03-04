@@ -134,6 +134,16 @@ Parameters:
     Type: String
     Default: "169.254.169.254"
 
+  BackupScriptURL:
+    Description: A URL that points to the 'efs-ec2-backup.sh' script required for the template.
+    Type: String
+    Default: "https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-ec2-backup.sh"
+
+  FPSyncScriptURL:
+    Description: A URL that points to the 'efs-backup-fpsync.sh' script required for the template.
+    Type: String
+    Default: "https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-backup-fpsync.sh"
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -164,6 +174,12 @@ Metadata:
           - SuccessNotification
           - Email
           - Dashboard
+      - Label:
+          default: Debugging
+        Parameters:
+          - BackupScriptURL
+          - FPSyncScriptURL
+
     ParameterLabels:
       IntervalTag:
         default: Interval Label
@@ -195,6 +211,10 @@ Metadata:
         default: Proxy URL (Optional)
       NoProxy:
         default: No Proxy (Optional)
+      BackupScriptURL:
+        default: A URL that points to the 'efs-ec2-backup.sh'
+      FPSyncScriptURL:
+        default: A URL that points to the 'efs-backup-fpsync.sh'
 
 Mappings:
   Map:
