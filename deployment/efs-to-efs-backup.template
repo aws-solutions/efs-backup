@@ -20,6 +20,11 @@ Parameters:
     Description: The ID of a security group that allows access the source EFS fs
     Type: String
 
+  # Will be added to the EC2 instance
+  InstanceKeyPair:
+    Description: A keypair to attach to the backup instance so SSH can be used for debugging purposes
+    Type: AWS::EC2::KeyPair::KeyName
+
   # Interval tag for your backups; daily, weekly, monthly
   IntervalTag:
     Description: Interval label to identify backups
@@ -152,6 +157,7 @@ Metadata:
         Parameters:
           - SrcEFS
           - InstanceSG
+          - InstanceKeyPair
           - IntervalTag
           - Retain
           - FolderLabel
@@ -189,6 +195,8 @@ Metadata:
         default: Source EFS
       InstanceSG:
         default: Backup instance security group ID
+      InstanceKeyPair:
+        default: Backup instance key pair name
       FolderLabel:
         default: Folder Label
       InstanceSize:
@@ -305,6 +313,8 @@ Resources:
   BackupInstanceLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      KeyName:
+        Ref: "InstanceKeyPair"
       ImageId: !GetAtt AMIInfo.Id
       SecurityGroups:
         - !Sub ${EFSSecurityGroup}
