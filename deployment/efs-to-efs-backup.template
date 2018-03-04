@@ -96,7 +96,7 @@ Parameters:
     Description: VPC where the source EFS has mount targets
     Type: AWS::EC2::VPC::Id
 
-  # List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2)
+  # List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 3)
   Subnets:
     Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets(Choose 2)
     Type: List<AWS::EC2::Subnet::Id>
@@ -252,6 +252,14 @@ Resources:
     Properties:
       FileSystemId: !Sub ${DstEFS}
       SubnetId: !Select [ 1, !Ref Subnets ]
+      SecurityGroups:
+        - !Sub ${EFSSecurityGroup}
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Sub ${DstEFS}
+      SubnetId: !Select [ 2, !Ref Subnets ]
       SecurityGroups:
         - !Sub ${EFSSecurityGroup}
 
