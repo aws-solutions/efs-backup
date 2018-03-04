@@ -125,6 +125,15 @@ Parameters:
       - "No"
     Default: "Yes"
 
+  ProxyURL:
+    Description: The optional full URL of the proxy that provides internet access
+    Type: String
+
+  NoProxy:
+    Description: A an optional list of hosts that should not be accessed by the proxy
+    Type: String
+    Default: "169.254.169.254"
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -141,6 +150,8 @@ Metadata:
           - BackupPrefix
           - EFSMode
           - EFSEncryption
+          - ProxyURL
+          - NoProxy
       - Label:
           default: EC2 Configuration
         Parameters:
@@ -180,6 +191,10 @@ Metadata:
         default: VPC ID
       EFSEncryption:
         default: EFS Encryption
+      ProxyURL:
+        default: Proxy URL (Optional)
+      NoProxy:
+        default: No Proxy (Optional)
 
 Mappings:
   Map:
@@ -279,17 +294,75 @@ Resources:
       UserData:
         # download and run efs-backup script
           Fn::Base64: !Sub |
-           #!/bin/bash
-           sudo yum install amazon-ssm-agent -y
-           sudo /sbin/start amazon-ssm-agent
+            Content-Type: multipart/mixed; boundary="//"
+            MIME-Version: 1.0
 
-           wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-ec2-backup.sh -P /home/ec2-user
-           wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-backup-fpsync.sh -P /home/ec2-user
+            --//
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="cloud-config.txt"
 
-           chmod a+x /home/ec2-user/efs-ec2-backup.sh
-           chmod a+x /home/ec2-user/efs-backup-fpsync.sh
+            #cloud-config
+            cloud_final_modules:
+            - [scripts-user, always]
 
-           /home/ec2-user/efs-ec2-backup.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${Retain} ${FolderLabel} ${BackupPrefix}
+            --//
+            Content-Type: text/x-shellscript; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="userdata.txt"
+
+            #!/bin/bash
+            set -e
+
+            export {http,https}_proxy="${ProxyURL}"
+            export {HTTP,HTTPS}_PROXY="${ProxyURL}"
+            export {no_proxy,NO_PROXY}="${NoProxy}"
+
+            sudo yum install amazon-ssm-agent -y
+            sudo yum install -y jq
+
+            sudo mv /etc/init/amazon-ssm-agent.conf /etc/init/amazon-ssm-agent.conf.bak
+
+            # How many lines from the bottom of the config file to insert the proxy statements
+            insert_position=2
+
+            sudo head -n -${!insert_position} /etc/init/amazon-ssm-agent.conf.bak | sudo tee /etc/init/amazon-ssm-agent.conf
+            if [ -n "$http_proxy" ]; then
+              echo "env http_proxy=${!http_proxy}"   | sudo tee -a /etc/init/amazon-ssm-agent.conf;
+            fi
+            if [ -n "$https_proxy" ]; then
+              echo "env https_proxy=${!https_proxy}" | sudo tee -a /etc/init/amazon-ssm-agent.conf;
+            fi
+            if [ -n "$HTTP_PROXY" ]; then
+              echo "env HTTP_PROXY=${!HTTP_PROXY}"   | sudo tee -a /etc/init/amazon-ssm-agent.conf;
+            fi
+            if [ -n "$HTTPS_PROXY" ]; then
+              echo "env HTTPS_PROXY=${!HTTPS_PROXY}" | sudo tee -a /etc/init/amazon-ssm-agent.conf;
+            fi
+            if [ -n "$no_proxy" ]; then
+              echo "env no_proxy=${!no_proxy}"       | sudo tee -a /etc/init/amazon-ssm-agent.conf;
+            fi
+            if [ -n "$NO_PROXY" ]; then
+              echo "env NO_PROXY=${!NO_PROXY}"       | sudo tee -a /etc/init/amazon-ssm-agent.conf;
+            fi
+            sudo tail -n ${!insert_position} /etc/init/amazon-ssm-agent.conf.bak | sudo tee -a /etc/init/amazon-ssm-agent.conf
+
+            echo "=== Begin SSM Agent Config ==="
+            sudo cat /etc/init/amazon-ssm-agent.conf
+            echo "=== End SSM Agent Config ==="
+
+            sudo /sbin/restart amazon-ssm-agent
+
+            wget "${BackupScriptURL}" -P /home/ec2-user
+            wget "${FPSyncScriptURL}" -P /home/ec2-user
+
+            chmod a+x /home/ec2-user/efs-ec2-backup.sh
+            chmod a+x /home/ec2-user/efs-backup-fpsync.sh
+
+            /home/ec2-user/efs-ec2-backup.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${Retain} ${FolderLabel} ${BackupPrefix}
+            --//
 
   EFSAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
