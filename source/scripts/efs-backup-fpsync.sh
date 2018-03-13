@@ -36,8 +36,8 @@ sudo yum -y install nfs-utils
 
 echo "-- $(date -u +%FT%T) -- sudo yum -y groupinstall 'Development Tools'"
 sudo yum -y groupinstall "Development Tools"
-echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/solutions-reference/efs-backup/latest/fpart.zip"
-wget https://s3.amazonaws.com/solutions-reference/efs-backup/latest/fpart.zip
+echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/fpart.zip"
+wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/fpart.zip
 unzip fpart.zip
 cd fpart-fpart-0.9.3/
 autoreconf -i
