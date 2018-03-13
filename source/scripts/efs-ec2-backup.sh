@@ -12,15 +12,6 @@
 # author: aws-solutions-builder@
 
 function cleanup {
-  # Fetch instance IAM role credentials (should be automatically injected but doesn't seem to work during cloud-init)
-  sudo yum install -y jq
-  ROLE_IAM=$(curl --show-error --fail http://169.254.169.254/latest/meta-data/iam/security-credentials/)
-  CREDENTIAL_JSON=$(curl --show-error --fail http://169.254.169.254/latest/meta-data/iam/security-credentials/${ROLE_IAM})
-  STATUS=$(echo "${CREDENTIAL_JSON}" | jq -r .Code)
-  echo "-- $(date -u +%FT%T) -- Got status [${STATUS}] when fetching credentials"
-  export AWS_ACCESS_KEY_ID=$(echo "${CREDENTIAL_JSON}" | jq -r .AccessKeyId)
-  export AWS_SECRET_ACCESS_KEY=$(echo "${CREDENTIAL_JSON}" | jq -r .SecretAccessKey)
-
   #
   # changing auto scaling capacity
   # parameters : [_asg_name]
