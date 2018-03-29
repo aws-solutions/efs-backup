@@ -75,10 +75,10 @@ sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --nu
 fpsyncStatus=$?
 echo "fpsync_stop:$(date -u +%FT%T)"
 
-echo "rsync_delete_start:$(date -u +%FT%T)"
-echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/"
-sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/
+echo "rsync_start:$(date -u +%FT%T)"
+echo "-- $(date -u +%FT%T) -- sudo rsync -r --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/"
+sudo rsync -r --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/
 
-echo "rsync_delete_stop:$(date -u +%FT%T)"
+echo "rsync_stop:$(date -u +%FT%T)"
 
 exit $fpsyncStatus

@@ -104,7 +104,7 @@ else
   aws s3 cp /tmp/efs-restore.log s3://${_s3bucket}/efs-restore-logs/${_folder_label}-${_interval}.${_backup_num}-restore-fpsync-`date +%Y%m%d-%H%M`.log
   echo "upload restore fpsync logs to S3, status: $?"
   echo "-- $(date -u +%FT%T) -- upload efs restore rsync logs to S3 bucket"
-  aws s3 cp /tmp/efs-restore-rsync.log s3://${_s3bucket}/efs-restore-logs/${_folder_label}-${_interval}.${_backup_num}-restore-rsync-delete-`date +%Y%m%d-%H%M`.log
+  aws s3 cp /tmp/efs-restore-rsync.log s3://${_s3bucket}/efs-restore-logs/${_folder_label}-${_interval}.${_backup_num}-restore-rsync-`date +%Y%m%d-%H%M`.log
   echo "upload restore rsync logs to S3, status: $?"
 
   #
@@ -123,15 +123,15 @@ else
   _ttfs=$(cat /tmp/efs-restore.log | grep 'Total transferred file size' | awk '{ttfs += $8} END {print ttfs}')
   echo "Total transferred file size: ${_ttfs}"
 
-  # timestamps for (fpsync) and (rsync --delete) file operations
+  # timestamps for (fpsync) and (rsync) file operations
   _fpsync_start=$(cat /var/log/cloud-init-output.log | grep 'fpsync_start' | cut -d: -f2-)
   echo "fpsync start time: ${_fpsync_start}"
   _fpsync_stop=$(cat /var/log/cloud-init-output.log | grep 'fpsync_stop' | cut -d: -f2-)
   echo "fpsync start time: ${_fpsync_stop}"
-  _rsync_delete_start=$(cat /var/log/cloud-init-output.log | grep 'rsync_delete_start' | cut -d: -f2-)
-  echo "rsync delete start: ${_rsync_delete_start}"
-  _rsync_delete_stop=$(cat /var/log/cloud-init-output.log | grep 'rsync_delete_stop' | cut -d: -f2-)
-  echo "rsync delete stop: ${_rsync_delete_stop}"
+  _rsync_start=$(cat /var/log/cloud-init-output.log | grep 'rsync_start' | cut -d: -f2-)
+  echo "rsync start: ${_rsync_start}"
+  _rsync_stop=$(cat /var/log/cloud-init-output.log | grep 'rsync_stop' | cut -d: -f2-)
+  echo "rsync stop: ${_rsync_stop}"
 
 
   _rtime=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
