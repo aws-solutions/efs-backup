@@ -150,7 +150,23 @@ Code Bucket Name:
 
 ***
 
-Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#### v1.2 changes
+
+```bash
+* fixed timeout issue with custom lambda resource fetching latest AMI
+* removed duplicate line in efs-to-efs-backup.template
+* error handling for efs mount targets not mounted
+* fixed false notification when efs mount targets not mounted
+* added support for restoring sub directory from the backup
+* backup window provided in form of drop down menu to avoid input errors
+* parallelized removal of snapshot in ec2-backup-fpsync.sh
+* improved overall backup and restore experience
+```
+
+
+***
+
+Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
 

@@ -137,7 +137,7 @@ def lambda_handler(event, context):
                 notify.customer(sns_topic_arn, data)
             elif data.get('BackupStatus') == 'Unsuccessful':
                 data.update({'Message': 'The EFS backup was unsuccessful. '
-                                        'The EC2 instance was unable to find the mount IP of EFS'})
+                                        'The EC2 instance was unable to find the mount IP OR mount EFS'})
                 notify.customer(sns_topic_arn, data)
             elif data.get('BackupStatus') is None:
                 data.update({'Message': 'The SSM script could not update the DynamoDB table with backup status, '

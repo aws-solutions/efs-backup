@@ -1,7 +1,5 @@
 #!/bin/bash
 # Example would be to run this script as follows:
-# Every 6 hours; retain last 4 backups
-# efs-backup.sh $src $dst hourly 4 efs-12345
 # Once a day; retain last 31 days
 # efs-backup.sh $src $dst daily 31 efs-12345
 # Once a week; retain 4 weeks of backup
@@ -19,6 +17,8 @@ destination=$2 #destination_ip:/
 interval=$3
 retain=$4
 efsid=$5
+region=$6
+instance_id=$7
 
 
 echo "## input from user ##"
@@ -34,6 +34,29 @@ sudo yum -y update
 echo "-- $(date -u +%FT%T) -- sudo yum -y install nfs-utils"
 sudo yum -y install nfs-utils
 
+echo "-- $(date -u +%FT%T) -- sudo mkdir /backup"
+sudo mkdir /backup
+echo "-- $(date -u +%FT%T) -- sudo mkdir /mnt/backups"
+sudo mkdir /mnt/backups
+
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup"
+sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup
+mount_src_status=$?
+echo "mount status for source efs: ${mount_src_status}"
+
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups"
+sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups
+mount_backup_status=$?
+echo "mount status for backup efs: ${mount_backup_status}"
+
+# if efs mount fails exit workflow
+if [ ${mount_src_status} != '0' ] || [ ${mount_backup_status} != '0' ]; then
+  echo "-- $(date -u +%FT%T) -- ERROR:efs_not_mounted"
+  exit $?
+fi
+
+echo "-- $(date -u +%FT%T) -- sudo yum -y install parallel"
+sudo yum -y install parallel
 echo "-- $(date -u +%FT%T) -- sudo yum -y groupinstall 'Development Tools'"
 sudo yum -y groupinstall "Development Tools"
 echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/fpart.zip"
@@ -48,21 +71,13 @@ sudo make install
 # Adding PATH
 PATH=$PATH:/usr/local/bin
 
-echo "-- $(date -u +%FT%T) -- sudo mkdir /backup"
-sudo mkdir /backup
-echo "-- $(date -u +%FT%T) -- sudo mkdir /mnt/backups"
-sudo mkdir /mnt/backups
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups
-
 # we need to decrement retain because we start counting with 0 and we need to remove the oldest backup
 echo "remove_snapshot_start:$(date -u +%FT%T)"
 let "retain=$retain-1"
 if sudo test -d /mnt/backups/$efsid/$interval.$retain; then
-  echo "-- $(date -u +%FT%T) -- sudo rm -rf /mnt/backups/$efsid/$interval.$retain"
-  sudo rm -rf /mnt/backups/$efsid/$interval.$retain
+  echo "-- $(date -u +%FT%T) -- find /mnt/backups/$efsid/$interval.$retain -maxdepth 0 | sudo parallel -j+0 rm -rf {}"
+  find /mnt/backups/$efsid/$interval.$retain -maxdepth 0 | sudo parallel -j+0 rm -rf {}
+  echo "rm status: $?"
 fi
 echo "remove_snapshot_stop:$(date -u +%FT%T)"
 
@@ -88,12 +103,7 @@ if [ ! -d /mnt/backups/$efsid ]; then
   echo "-- $(date -u +%FT%T) --  sudo chmod 700 /mnt/backups/$efsid"
   sudo chmod 700 /mnt/backups/$efsid
 fi
-# if [ ! -d /mnt/backups/efsbackup-logs ]; then
-#   echo "-- $(date -u +%FT%T) --  sudo mkdir -p /mnt/backups/efsbackup-logs"
-#   sudo mkdir -p /mnt/backups/efsbackup-logs
-#   echo "-- $(date -u +%FT%T) --  sudo chmod 700 /mnt/backups/efsbackup-logs"
-#   sudo chmod 700 /mnt/backups/efsbackup-logs
-# fi
+
 echo "-- $(date -u +%FT%T) --  sudo rm /tmp/efs-backup.log"
 sudo rm /tmp/efs-backup.log
 
