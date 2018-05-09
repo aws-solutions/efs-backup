@@ -71,14 +71,24 @@ fi
 
 # running fpsync in reverse direction to restore
 echo "fpsync_start:$(date -u +%FT%T)"
+<<<<<<< HEAD
 echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/"
 sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-restore.log" /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/
+=======
+echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/"
+sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-restore.log" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/
+>>>>>>> 917d5c2ced6b672a69e8df7d8f29b53cdf3e2506
 fpsyncStatus=$?
 echo "fpsync_stop:$(date -u +%FT%T)"
 
 echo "rsync_delete_start:$(date -u +%FT%T)"
+<<<<<<< HEAD
 echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/"
 sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/
+=======
+echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/"
+sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/
+>>>>>>> 917d5c2ced6b672a69e8df7d8f29b53cdf3e2506
 
 echo "rsync_delete_stop:$(date -u +%FT%T)"
 

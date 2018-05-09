@@ -93,7 +93,11 @@ else
   _restore_start_time=$(date -u +%FT%T)
   # _timeout_val=$(((${_backup_window}-1)*60)) # timeout 1 minute less than given window -> timeout in SSM
   # timeout --preserve-status --signal=2 ${_timeout_val} ./efs-backup-fpsync.sh ${_src_mount_ip}:/ ${_backup_mount_ip}:/ ${_interval} ${_retain} ${_folder_label}
+<<<<<<< HEAD
   /home/ec2-user/efs-restore-fpsync.sh ${_src_mount_ip}:${_restore_prefix} ${_backup_mount_ip}:/ ${_interval} ${_backup_num} ${_folder_label} ${_restore_sub_dir} ${_s3bucket}
+=======
+  /home/ec2-user/efs-restore-fpsync.sh ${_src_mount_ip}:${_src_prefix} ${_backup_mount_ip}:/ ${_interval} ${_backup_num} ${_folder_label} ${_s3bucket}
+>>>>>>> 917d5c2ced6b672a69e8df7d8f29b53cdf3e2506
   restoreStatus=$?
   _restore_stop_time=$(date -u +%FT%T)
   echo "-- $(date -u +%FT%T) -- fpsync finished with status: $restoreStatus"
@@ -147,7 +151,11 @@ else
 
   #
   # notify customer with restore status
+<<<<<<< HEAD
   # parameters : [_sns_topic, _source_efs, _backup_efs, _interval, _backup_num, _folder_label, _restore_prefix, _s3bucket]
+=======
+  # parameters : [_sns_topic, _source_efs, _backup_efs, _interval, _backup_num, _folder_label, _src_prefix, _s3bucket]
+>>>>>>> 917d5c2ced6b672a69e8df7d8f29b53cdf3e2506
   #
   if [ "${restoreStatus}" == "0" ]; then
     echo "-- $(date -u +%FT%T) -- notify customer of success"
