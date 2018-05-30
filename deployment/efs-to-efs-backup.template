@@ -52,7 +52,24 @@ Parameters:
     Description: Backup window duration in minutes
     Type: Number
     Default: 180
-    ConstraintDescription: must specify backup window iin minutes
+    ConstraintDescription: must specify backup window in minutes
+    AllowedValues:
+    - 60
+    - 90
+    - 120
+    - 150
+    - 180
+    - 240
+    - 300
+    - 360
+    - 480
+    - 600
+    - 720
+    - 840
+    - 960
+    - 1080
+    - 1200
+    - 1320
 
   # Schedule for the backup, cron(0 2 * * ? *)
   BackupSchedule:
@@ -377,7 +394,6 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn: !Sub ${EFSBackupStartEvent.Arn}
-      SourceArn: !Sub ${EFSBackupStartEvent.Arn}
 
   ASGEvent:
     Type: AWS::Events::Rule
@@ -595,7 +611,7 @@ Resources:
         S3Key: efs-backup/%VERSION%/amilookup.zip
       Handler: amilookup.handler
       Runtime: nodejs4.3
-      Timeout: 30
+      Timeout: 120
       Description: EFS Backup - This function is CloudFormation custom lambda resource that
          looks up the latest AMI ID.
       Role: !Sub ${SolutionHelperRole.Arn}

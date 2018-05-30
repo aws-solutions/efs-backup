@@ -49,6 +49,13 @@ Parameters:
     Default: '/'
     ConstraintDescription: specify single prefix for restore
 
+  # Sub directory that you want to restore
+  RestoreSubDir:
+    Description: Sub directory for restore, eg. /dir_x/; must have trailing '/'
+    Type: String
+    Default: '/'
+    ConstraintDescription: leave default if you want entire backup to be restored
+
   # Instance size to be used for restore
   InstanceSize:
     Description: Instance size for performing restore
@@ -106,6 +113,7 @@ Metadata:
           - BackupNum
           - FolderLabel
           - RestorePrefix
+          - RestoreSubDir
           - RestoreLogBucket
       - Label:
           default: EC2 Configuration
@@ -134,6 +142,8 @@ Metadata:
         default: Folder Label
       RestorePrefix:
         default: Restore Prefix
+      RestoreSubDir:
+        default: Restore Subdirectory
       InstanceSize:
         default: Instance Size
       VpcId:
@@ -210,7 +220,7 @@ Resources:
             chmod a+x /home/ec2-user/efs-ec2-restore.sh
             chmod a+x /home/ec2-user/efs-restore-fpsync.sh
 
-            /home/ec2-user/efs-ec2-restore.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${BackupNum} ${FolderLabel} ${RestorePrefix} ${RestoreLogBucket} ${SNSTopic}
+            /home/ec2-user/efs-ec2-restore.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${BackupNum} ${FolderLabel} ${RestorePrefix} ${RestoreSubDir} ${RestoreLogBucket} ${SNSTopic}
 
   RestoreAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -318,7 +328,7 @@ Resources:
         S3Key: efs-backup/%VERSION%/amilookup.zip
       Handler: amilookup.handler
       Runtime: nodejs4.3
-      Timeout: 30
+      Timeout: 120
       Description: EFS Backup - This function is CloudFormation custom lambda resource that
          looks up the latest AMI ID.
       Role: !Sub ${HelperRole.Arn}
