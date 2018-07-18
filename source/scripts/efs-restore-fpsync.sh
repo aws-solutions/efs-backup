@@ -29,6 +29,7 @@ sudo make install
 # Adding PATH
 PATH=$PATH:/usr/local/bin
 
+_thread_count=$(($(nproc --all) * 16))
 
 echo '-- $(date -u +%FT%T) -- sudo mkdir /mnt/source'
 sudo mkdir /mnt/source
@@ -44,31 +45,6 @@ if [ ! sudo test -d /mnt/backups/$efsid/$interval.$backupNum/ ]; then
   exit 1
 fi
 
-# ECU Count per instance
-# c4.large = 8
-# c4.xlarge = 16
-# c4.2xlarge = 31
-# c4.4xlarge = 62
-
-_instance_type=$(curl http://169.254.169.254/latest/meta-data/instance-type/)
-
-if [ "$_instance_type" == "c4.large" ]; then
-    _thread_count=8
-elif [ "$_instance_type" == "c4.xlarge" ]; then
-    _thread_count=16
-elif [ "$_instance_type" == "c4.2xlarge" ]; then
-    _thread_count=31
-elif [ "$_instance_type" == "c4.4xlarge" ]; then
-    _thread_count=62
-elif [ "$_instance_type" == "r4.large" ]; then
-    _thread_count=7
-elif [ "$_instance_type" == "r4.xlarge" ]; then
-    _thread_count=13
-elif [ "$_instance_type" == "m3.medium" ]; then
-    _thread_count=3
-else _thread_count=4
-fi
-
 # running fpsync in reverse direction to restore
 echo "fpsync_start:$(date -u +%FT%T)"
 echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/"
@@ -79,7 +55,6 @@ echo "fpsync_stop:$(date -u +%FT%T)"
 echo "rsync_delete_start:$(date -u +%FT%T)"
 echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/"
 sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-restore-rsync.log /mnt/backups/$efsid/$interval.$backupNum$subdir /mnt/source/
-
 echo "rsync_delete_stop:$(date -u +%FT%T)"
 
 exit $fpsyncStatus

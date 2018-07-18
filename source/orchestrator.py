@@ -139,6 +139,12 @@ def lambda_handler(event, context):
                 data.update({'Message': 'The EFS backup was unsuccessful. '
                                         'The EC2 instance was unable to find the mount IP OR mount EFS'})
                 notify.customer(sns_topic_arn, data)
+            elif data.get('BackupStatus') == "fpsync failed":
+                data.update({'Message': 'fpsync process in backup script failed or did not start'})
+                notify.customer(sns_topic_arn, data)
+            elif data.get('BackupStatus') == "Rsync Delete Incomplete":
+                data.update({'Message': 'rsync --delete process could not complete'})
+                notify.customer(sns_topic_arn, data)
             elif data.get('BackupStatus') is None:
                 data.update({'Message': 'The SSM script could not update the DynamoDB table with backup status, '
                                         'please check the logs in the S3 bucket for the details.'})

@@ -25,16 +25,6 @@ Parameters:
       - weekly
       - monthly
 
-  # Instance size to be used for backup
-  InstanceSize:
-    Description: Instance size for performing backup
-    Type: String
-    Default: small70MiBps
-    AllowedValues:
-      - small70MiBps
-      - medium100MiBps
-      - large130MiBps
-
   # Number of backups you want to retain
   Retain:
     Description: Backups you want to retain
@@ -155,7 +145,6 @@ Metadata:
       - Label:
           default: EC2 Configuration
         Parameters:
-          - InstanceSize
           - Subnets
           - VpcId
       - Label:
@@ -173,8 +162,6 @@ Metadata:
         default: Source EFS
       FolderLabel:
         default: Folder Label
-      InstanceSize:
-        default: Instance Size
       BackupWindow:
         default: Backup Window
       BackupSchedule:
@@ -194,25 +181,21 @@ Mappings:
   Map:
     encryption: {"Yes": "true", "No": "false"}
     send-data: {"SendAnonymousData": "Yes"}
-    m3.medium: {"Arch":"HVM64"}
-    c4.large: {"Arch":"HVM64"}
-    c4.xlarge: {"Arch":"HVM64"}
-    r4.large: {"Arch":"HVM64"}
-    r4.xlarge: {"Arch":"HVM64"}
-    us-east-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    us-east-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    us-west-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    us-west-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ca-central-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    eu-west-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    eu-central-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    eu-west-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-southeast-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-southeast-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-northeast-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-northeast-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-south-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    sa-east-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
+    c5.xlarge: {"Arch":"HVM64"}
+    us-east-1: {"InstanceSize":"c5.xlarge"}
+    us-east-2: {"InstanceSize":"c5.xlarge"}
+    us-west-1: {"InstanceSize":"c5.xlarge"}
+    us-west-2: {"InstanceSize":"c5.xlarge"}
+    ca-central-1: {"InstanceSize":"c5.xlarge"}
+    eu-west-1: {"InstanceSize":"c5.xlarge"}
+    eu-central-1: {"InstanceSize":"c5.xlarge"}
+    eu-west-2: {"InstanceSize":"c5.xlarge"}
+    ap-southeast-1: {"InstanceSize":"c5.xlarge"}
+    ap-southeast-2: {"InstanceSize":"c5.xlarge"}
+    ap-northeast-1: {"InstanceSize":"c5.xlarge"}
+    ap-northeast-2: {"InstanceSize":"c5.xlarge"}
+    ap-south-1: {"InstanceSize":"c5.xlarge"}
+    sa-east-1: {"InstanceSize":"c5.xlarge"}
 
 Conditions:
   DashboardOpt: !Equals [ !Ref Dashboard, "Yes" ]
@@ -274,14 +257,15 @@ Resources:
       ImageId: !GetAtt AMIInfo.Id
       SecurityGroups:
         - !Sub ${EFSSecurityGroup}
-      InstanceType: !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize]
+      InstanceType: !FindInMap [Map, !Ref "AWS::Region", "InstanceSize"]
       IamInstanceProfile: !Sub ${InstanceProfile}
       UserData:
         # download and run efs-backup script
           Fn::Base64: !Sub |
            #!/bin/bash
-           sudo yum install amazon-ssm-agent -y
-           sudo /sbin/start amazon-ssm-agent
+           #sudo yum install amazon-ssm-agent -y
+           sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+           sudo start amazon-ssm-agent
 
            wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-ec2-backup.sh -P /home/ec2-user
            wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-backup-fpsync.sh -P /home/ec2-user
@@ -322,7 +306,7 @@ Resources:
       Description: EFS Backup - Lambda function to create EFS backups
       Environment:
         Variables:
-          instance_type: !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize]
+          instance_type: !FindInMap [Map, !Ref "AWS::Region", "InstanceSize"]
           autoscaling_group_name: !Sub ${EFSAutoScalingGroup}
           source_efs: !Sub ${SrcEFS}
           destination_efs: !Sub ${DstEFS}
@@ -350,6 +334,8 @@ Resources:
   EFSDynamoDB:
     Type: AWS::DynamoDB::Table
     Properties:
+        SSESpecification:
+          SSEEnabled: true
         AttributeDefinitions:
           - AttributeName: BackupId
             AttributeType: S
@@ -357,8 +343,8 @@ Resources:
           - AttributeName: BackupId
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2
         TimeToLiveSpecification:
           AttributeName: ExpireItem
           Enabled: true
@@ -610,7 +596,7 @@ Resources:
         S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
         S3Key: efs-backup/%VERSION%/amilookup.zip
       Handler: amilookup.handler
-      Runtime: nodejs4.3
+      Runtime: nodejs8.10
       Timeout: 120
       Description: EFS Backup - This function is CloudFormation custom lambda resource that
          looks up the latest AMI ID.
@@ -621,7 +607,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt AMIInfoFunction.Arn
       Region: !Ref "AWS::Region"
-      Architecture: !FindInMap [Map, !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize], "Arch"]
+      Architecture: !FindInMap [Map, !FindInMap [Map, !Ref "AWS::Region", "InstanceSize"], "Arch"]
 
   SolutionHelper:
     Type: AWS::Lambda::Function
@@ -653,7 +639,7 @@ Outputs:
     Value: !Sub ${SNSTopic.TopicName}
 
   SourceEFS:
-    Description: Backup EFS created by template
+    Description: Source EFS provided by user
     Value: !Sub ${SrcEFS}
 
   BackupEFS:

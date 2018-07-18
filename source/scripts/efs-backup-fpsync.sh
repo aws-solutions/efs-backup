@@ -20,7 +20,6 @@ efsid=$5
 region=$6
 instance_id=$7
 
-
 echo "## input from user ##"
 echo "source: ${source}"
 echo "destination: ${destination}"
@@ -57,10 +56,12 @@ fi
 
 echo "-- $(date -u +%FT%T) -- sudo yum -y install parallel"
 sudo yum -y install parallel
+echo "-- $(date -u +%FT%T) -- sudo yum -y install --enablerepo=epel tree"
+sudo yum -y install --enablerepo=epel tree
 echo "-- $(date -u +%FT%T) -- sudo yum -y groupinstall 'Development Tools'"
 sudo yum -y groupinstall "Development Tools"
-echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/fpart.zip"
-wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/fpart.zip
+echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/solutions-features-reference/efs-backup/latest/fpart.zip"
+wget https://s3.amazonaws.com/solutions-features-reference/efs-backup/latest/fpart.zip
 unzip fpart.zip
 cd fpart-fpart-0.9.3/
 autoreconf -i
@@ -71,12 +72,16 @@ sudo make install
 # Adding PATH
 PATH=$PATH:/usr/local/bin
 
+_thread_count=$(($(nproc --all) * 16))
+
 # we need to decrement retain because we start counting with 0 and we need to remove the oldest backup
 echo "remove_snapshot_start:$(date -u +%FT%T)"
 let "retain=$retain-1"
 if sudo test -d /mnt/backups/$efsid/$interval.$retain; then
-  echo "-- $(date -u +%FT%T) -- find /mnt/backups/$efsid/$interval.$retain -maxdepth 0 | sudo parallel -j+0 rm -rf {}"
-  find /mnt/backups/$efsid/$interval.$retain -maxdepth 0 | sudo parallel -j+0 rm -rf {}
+  echo "-- $(date -u +%FT%T) -- sudo tree /mnt/backups/$efsid/$interval.$retain -dfi | parallel --no-notice -j $_thread_count sudo rm {} -r &>/dev/null"
+  sudo tree /mnt/backups/$efsid/$interval.$retain -dfi | parallel --will-cite -j $_thread_count sudo rm {} -r &>/dev/null
+  echo "-- $(date -u +%FT%T) -- sudo rm /mnt/backups/$efsid/$interval.$retain -r &>/dev/null"
+  sudo rm /mnt/backups/$efsid/$interval.$retain -r &>/dev/null
   echo "rm status: $?"
 fi
 echo "remove_snapshot_stop:$(date -u +%FT%T)"
@@ -92,8 +97,8 @@ done
 echo "create_snapshot_start:$(date -u +%FT%T)"
 # copy first backup with hard links, then replace first backup with new backup
 if sudo test -d /mnt/backups/$efsid/$interval.0 ; then
-  echo "-- $(date -u +%FT%T) --  sudo cp -al /mnt/backups/$efsid/$interval.0 /mnt/backups/$efsid/$interval.1"
-  sudo cp -al /mnt/backups/$efsid/$interval.0 /mnt/backups/$efsid/$interval.1
+  echo "-- $(date -u +%FT%T) --  sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -o \"-a -v --link-dest=../`basename /mnt/backups/$efsid/$interval.0`\" /mnt/backups/$efsid/$interval.0 /mnt/backups/$efsid/$interval.1"
+  sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -o "-a -v --link-dest=../`basename /mnt/backups/$efsid/$interval.0`" /mnt/backups/$efsid/$interval.0 /mnt/backups/$efsid/$interval.1
 fi
 echo "create_snapshot_stop:$(date -u +%FT%T)"
 
@@ -107,31 +112,21 @@ fi
 echo "-- $(date -u +%FT%T) --  sudo rm /tmp/efs-backup.log"
 sudo rm /tmp/efs-backup.log
 
-# ECU Count per instance
-# c4.large = 8
-# c4.xlarge = 16
-# r4.large = 7
-# r4.xlarge = 13
-# m3.medium = 3
-
-_instance_type=$(curl http://169.254.169.254/latest/meta-data/instance-type/)
-
-if [ "$_instance_type" == "c4.large" ]; then
-    _thread_count=8
-elif [ "$_instance_type" == "c4.xlarge" ]; then
-    _thread_count=16
-elif [ "$_instance_type" == "r4.large" ]; then
-    _thread_count=7
-elif [ "$_instance_type" == "r4.xlarge" ]; then
-    _thread_count=13
-elif [ "$_instance_type" == "m3.medium" ]; then
-    _thread_count=3
-else _thread_count=4
-fi
-
 # start fpsync process
 echo "Stating backup....."
 echo "-- $(date -u +%FT%T) --  sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -o \"-a --stats --numeric-ids --log-file=/tmp/efs-backup.log\" /backup/ /mnt/backups/$efsid/$interval.0/"
 sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-backup.log" /backup/ /mnt/backups/$efsid/$interval.0/ 1>/tmp/efs-fpsync.log
 fpsyncStatus=$?
+echo "fpsyncStatus:$fpsyncStatus"
+
+# removing files from target efs which are not in source
+echo "rsync_delete_start:$(date -u +%FT%T)"
+echo "-- $(date -u +%FT%T) -- sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-backup-rsync.log  /backup/ /mnt/backups/$efsid/$interval.0/"
+sudo rsync -r --delete --existing --ignore-existing --ignore-errors --log-file=/tmp/efs-backup-rsync.log  /backup/ /mnt/backups/$efsid/$interval.0/
+rsyncDeleteStatus=$?
+echo "rsyncDeleteStatus:$rsyncDeleteStatus"
+echo "rsync_delete_stop:$(date -u +%FT%T)"
+echo "-- $(date -u +%FT%T) -- sudo touch /mnt/backups/$efsid/$interval.0/"
+sudo touch /mnt/backups/$efsid/$interval.0/
+
 exit $fpsyncStatus

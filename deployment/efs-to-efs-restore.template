@@ -56,16 +56,6 @@ Parameters:
     Default: '/'
     ConstraintDescription: leave default if you want entire backup to be restored
 
-  # Instance size to be used for restore
-  InstanceSize:
-    Description: Instance size for performing restore
-    Type: String
-    Default: small70MiBps
-    AllowedValues:
-      - small70MiBps
-      - medium100MiBps
-      - large130MiBps
-
   # VPC where the source/destination EFS resides
   VpcId:
     Description: VPC where the source/destination EFS mount targets reside
@@ -76,7 +66,6 @@ Parameters:
     Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2)
     Type: List<AWS::EC2::Subnet::Id>
     ConstraintDescription: must specify subnets in different AZs
-
 
   SecurityGroupId:
     Description: The ID of an existing EC2 SecurityGroup in your Virtual Private Cloud (VPC), which should provide access to your existing EFS
@@ -118,7 +107,6 @@ Metadata:
       - Label:
           default: EC2 Configuration
         Parameters:
-          - InstanceSize
           - Subnets
           - VpcId
           - SecurityGroupId
@@ -144,8 +132,6 @@ Metadata:
         default: Restore Prefix
       RestoreSubDir:
         default: Restore Subdirectory
-      InstanceSize:
-        default: Instance Size
       VpcId:
         default: VPC ID
       SecurityGroupId:
@@ -156,25 +142,21 @@ Metadata:
 Mappings:
   Map:
     send-data: {"SendAnonymousData": "Yes"}
-    m3.medium: {"Arch":"HVM64"}
-    c4.large: {"Arch":"HVM64"}
-    c4.xlarge: {"Arch":"HVM64"}
-    r4.large: {"Arch":"HVM64"}
-    r4.xlarge: {"Arch":"HVM64"}
-    us-east-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    us-east-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    us-west-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    us-west-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ca-central-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    eu-west-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    eu-central-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    eu-west-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-southeast-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-southeast-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-northeast-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-northeast-2: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    ap-south-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
-    sa-east-1: {"small70MiBps":"c4.large","medium100MiBps":"c4.xlarge","large130MiBps":"r4.xlarge"}
+    c5.xlarge: {"Arch":"HVM64"}
+    us-east-1: {"InstanceSize":"c5.xlarge"}
+    us-east-2: {"InstanceSize":"c5.xlarge"}
+    us-west-1: {"InstanceSize":"c5.xlarge"}
+    us-west-2: {"InstanceSize":"c5.xlarge"}
+    ca-central-1: {"InstanceSize":"c5.xlarge"}
+    eu-west-1: {"InstanceSize":"c5.xlarge"}
+    eu-central-1: {"InstanceSize":"c5.xlarge"}
+    eu-west-2: {"InstanceSize":"c5.xlarge"}
+    ap-southeast-1: {"InstanceSize":"c5.xlarge"}
+    ap-southeast-2: {"InstanceSize":"c5.xlarge"}
+    ap-northeast-1: {"InstanceSize":"c5.xlarge"}
+    ap-northeast-2: {"InstanceSize":"c5.xlarge"}
+    ap-south-1: {"InstanceSize":"c5.xlarge"}
+    sa-east-1: {"InstanceSize":"c5.xlarge"}
 
 Conditions:
   DashboardOpt: !Equals [ !Ref Dashboard, "Yes" ]
@@ -207,7 +189,7 @@ Resources:
       SecurityGroups:
         - !Sub ${EFSSecurityGroup}
         - !Ref SecurityGroupId
-      InstanceType: !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize]
+      InstanceType: !FindInMap [Map, !Ref "AWS::Region", "InstanceSize"]
       IamInstanceProfile: !Sub ${InstanceProfile}
       UserData:
         # download and run efs-restore script
@@ -327,7 +309,7 @@ Resources:
         S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
         S3Key: efs-backup/%VERSION%/amilookup.zip
       Handler: amilookup.handler
-      Runtime: nodejs4.3
+      Runtime: nodejs8.10
       Timeout: 120
       Description: EFS Backup - This function is CloudFormation custom lambda resource that
          looks up the latest AMI ID.
@@ -338,7 +320,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt AMIInfoFunction.Arn
       Region: !Ref "AWS::Region"
-      Architecture: !FindInMap [Map, !FindInMap [Map, !Ref "AWS::Region", !Ref InstanceSize], "Arch"]
+      Architecture: !FindInMap [Map, !FindInMap [Map, !Ref "AWS::Region", "InstanceSize"], "Arch"]
 
 
   #

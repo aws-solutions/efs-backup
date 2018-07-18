@@ -150,6 +150,35 @@ Code Bucket Name:
 
 ***
 
+#### v1.2 changes
+
+```bash
+* fixed timeout issue with custom lambda resource fetching latest AMI
+* removed duplicate line in efs-to-efs-backup.template
+* error handling for efs mount targets not mounted
+* fixed false notification when efs mount targets not mounted
+* added support for restoring sub directory from the backup
+* backup window provided in form of drop down menu to avoid input errors
+* parallelized removal of snapshot in ec2-backup-fpsync.sh
+* improved overall backup and restore experience
+```
+
+***
+
+#### v1.3 changes
+
+```bash
+* parallel operations to improve removal of old backups
+* parallel operations to improve creation of hardlinks for backups
+* improving backup notifications
+* drop down options for backup window selection
+* instance size selection defaults to c5.xlarge
+* node.js runtime update to 8.10
+* DynamoDB Read/Write provisioned capacity units reduced to 2
+```
+
+***
+
 Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
