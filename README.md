@@ -105,7 +105,7 @@ Updating version number in the template with v1.0
 sed -i '' -e s/%VERSION%/v1.0/g deployment/dist/efs-to-efs-backup.template
 sed -i '' -e s/%VERSION%/v1.0/g deployment/dist/efs-to-efs-restore.template
 Download the fpart package from github
-wget https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip fpart.zip
+curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 -s -O https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip fpart.zip
 https://codeload.github.com/martymac/fpart/zip/fpart-0.9.3
 Resolving codeload.github.com (codeload.github.com)...
 Connecting to codeload.github.com (codeload.github.com)|... connected.
