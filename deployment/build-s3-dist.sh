@@ -44,10 +44,6 @@ sed -i '' -e $replace deployment/dist/efs-to-efs-backup.template
 echo "sed -i '' -e $replace deployment/dist/efs-to-efs-restore.template"
 sed -i '' -e $replace deployment/dist/efs-to-efs-restore.template
 
-echo 'Download the fpart package from github'
-echo 'curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 -s -O https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip deployment/dist/fpart.zip'
-curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 -s -O https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip deployment/dist/fpart.zip
-
 echo 'Download the AMI ID lookup package from S3'
 echo 'curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 -s -O https://s3.amazonaws.com/cloudformation-examples/lambda/amilookup.zip; mv amilookup.zip deployment/dist/amilookup.zip'
 curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 -s -O https://s3.amazonaws.com/cloudformation-examples/lambda/amilookup.zip; mv amilookup.zip deployment/dist/amilookup.zip

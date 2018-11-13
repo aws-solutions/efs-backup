@@ -104,17 +104,6 @@ sed -i '' -e s/%TEMPLATE_BUCKET_NAME%/solutions-reference/g deployment/dist/efs-
 Updating version number in the template with v1.0
 sed -i '' -e s/%VERSION%/v1.0/g deployment/dist/efs-to-efs-backup.template
 sed -i '' -e s/%VERSION%/v1.0/g deployment/dist/efs-to-efs-restore.template
-Download the fpart package from github
-curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 -s -O https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip fpart.zip
-https://codeload.github.com/martymac/fpart/zip/fpart-0.9.3
-Resolving codeload.github.com (codeload.github.com)...
-Connecting to codeload.github.com (codeload.github.com)|... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: unspecified [application/zip]
-Saving to: 'fpart-0.9.3.zip'
-0K .......... .......... .......... .......... .......... 14.3M
-50K .......... .......... .... 15.4M=0.005s
-(14.6 MB/s) - 'fpart-0.9.3.zip' saved [76187]
 cp source/scripts/efs-* deployment/dist
 
 $ ls -l deployment/dist     
@@ -125,7 +114,6 @@ $ ls -l deployment/dist
 -rw-r--r--      efs-restore-fpsync.sh
 -rw-r--r--      efs-restore.template
 -rw-r--r--      efs_to_efs_backup.zip
--rw-r--r--      fpart.zip
 -rw-r--r--      amilookup.zip
 ```
 ***
