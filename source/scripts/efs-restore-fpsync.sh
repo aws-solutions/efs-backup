@@ -33,10 +33,10 @@ echo '-- $(date -u +%FT%T) -- sudo mkdir /mnt/source'
 sudo mkdir /mnt/source
 echo '-- $(date -u +%FT%T) -- sudo mkdir /mnt/backups'
 sudo mkdir /mnt/backups
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /mnt/source"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /mnt/source
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $backup /mnt/backups"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $backup /mnt/backups
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev_noresvport $source /mnt/source"
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev_noresvport $source /mnt/source
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev_noresvport $backup /mnt/backups"
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev_noresvport $backup /mnt/backups
 
 if [ ! sudo test -d /mnt/backups/$efsid/$interval.$backupNum/ ]; then
   echo "EFS Backup $efsid/$interval.$backupNum does not exist!"

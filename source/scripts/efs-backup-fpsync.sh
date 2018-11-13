@@ -52,10 +52,10 @@ echo "-- $(date -u +%FT%T) -- sudo mkdir /backup"
 sudo mkdir /backup
 echo "-- $(date -u +%FT%T) -- sudo mkdir /mnt/backups"
 sudo mkdir /mnt/backups
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $source /backup"
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $source /backup
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $destination /mnt/backups"
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $destination /mnt/backups
 
 # we need to decrement retain because we start counting with 0 and we need to remove the oldest backup
 echo "remove_snapshot_start:$(date -u +%FT%T)"
