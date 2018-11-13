@@ -18,7 +18,7 @@ echo "-- $(date -u +%FT%T) -- sudo yum -y install fpart
 sudo yum -y install fpart 
 
 # Adding PATH
-PATH=$PATH:/usr/local/bin
+PATH=$PATH:/usr/local/bin:/usr/bin
 
 
 echo '-- $(date -u +%FT%T) -- sudo mkdir /mnt/source'
@@ -62,8 +62,8 @@ fi
 
 # running fpsync in reverse direction to restore
 echo "fpsync_start:$(date -u +%FT%T)"
-echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/"
-sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-restore.log" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/
+echo "-- $(date -u +%FT%T) -- sudo \"PATH=$PATH\" fpsync -n $_thread_count -v -o \"-a --stats --numeric-ids --log-file=/tmp/efs-restore.log\" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/"
+sudo "PATH=$PATH" fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-restore.log" /mnt/backups/$efsid/$interval.$backupNum/ /mnt/source/
 fpsyncStatus=$?
 echo "fpsync_stop:$(date -u +%FT%T)"
 
