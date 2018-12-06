@@ -358,3 +358,7 @@ Outputs:
   AmiId:
     Description: Ami Id vended in template
     Value: !GetAtt AMIInfo.Id
+
+  EFSSecurityGroup:
+    Description: Backup EFS security group
+    Value: !Ref EFSSecurityGroup
