@@ -334,21 +334,19 @@ Resources:
   EFSDynamoDB:
     Type: AWS::DynamoDB::Table
     Properties:
-        SSESpecification:
-          SSEEnabled: true
         AttributeDefinitions:
           - AttributeName: BackupId
             AttributeType: S
+        BillingMode: PAY_PER_REQUEST
         KeySchema:
           - AttributeName: BackupId
             KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 2
-          WriteCapacityUnits: 2
+        SSESpecification:
+          SSEEnabled: true
+        TableName: !Sub ${AWS::StackName}
         TimeToLiveSpecification:
           AttributeName: ExpireItem
           Enabled: true
-        TableName: !Sub ${AWS::StackName}
 
   EFSLogBucket:
     Type: AWS::S3::Bucket
