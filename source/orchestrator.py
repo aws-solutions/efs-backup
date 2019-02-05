@@ -133,7 +133,7 @@ def lambda_handler(event, context):
         # Create SNS notification message
         if data is not None:
             if data.get('BackupStatus') == 'Incomplete':
-                data.update({'Message': 'The EFS backup was incomplete. The backup window expired before the full backup was completed.'})
+                data.update({'Message': 'The EFS backup was incomplete. Either backup window expired before full backup or fpsync process was not completed.'})
                 notify.customer(sns_topic_arn, data)
             elif data.get('BackupStatus') == 'Unsuccessful':
                 data.update({'Message': 'The EFS backup was unsuccessful. '

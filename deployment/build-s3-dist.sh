@@ -43,11 +43,15 @@ echo "sed -i '' -e $replace deployment/dist/efs-to-efs-backup.template"
 sed -i '' -e $replace deployment/dist/efs-to-efs-backup.template
 echo "sed -i '' -e $replace deployment/dist/efs-to-efs-restore.template"
 sed -i '' -e $replace deployment/dist/efs-to-efs-restore.template
+echo "sed -i '' -e $replace deployment/dist/efs-backup-fpsync.sh"
+sed -i '' -e $replace deployment/dist/efs-backup-fpsync.sh
+echo "sed -i '' -e $replace deployment/dist/efs-restore-fpsync.sh"
+sed -i '' -e $replace deployment/dist/efs-restore-fpsync.sh
 
 echo 'Download the fpart package from github'
-echo 'wget https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip deployment/dist/fpart.zip'
-wget https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip deployment/dist/fpart.zip
+echo 'curl --connect-timeout 5 --speed-time 5 --retry 10 -LOk https://github.com/martymac/fpart/archive/fpart-1.0.0.zip -o deployment/dist/fpart.zip'
+wget https://github.com/martymac/fpart/archive/fpart-1.0.0.zip; mv fpart-1.0.0.zip deployment/dist/fpart.zip
 
 echo 'Download the AMI ID lookup package from S3'
-echo 'wget https://s3.amazonaws.com/cloudformation-examples/lambda/amilookup.zip; mv amilookup.zip deployment/dist/amilookup.zip'
-wget https://s3.amazonaws.com/cloudformation-examples/lambda/amilookup.zip; mv amilookup.zip deployment/dist/amilookup.zip
+echo 'curl --connect-timeout 5 --speed-time 5 --retry 10 https://s3.amazonaws.com/cloudformation-examples/lambda/amilookup.zip -o deployment/dist/amilookup.zip'
+curl --connect-timeout 5 --speed-time 5 --retry 10 https://s3.amazonaws.com/cloudformation-examples/lambda/amilookup.zip -o deployment/dist/amilookup.zip

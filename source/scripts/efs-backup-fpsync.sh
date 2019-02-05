@@ -38,13 +38,14 @@ sudo mkdir /backup
 echo "-- $(date -u +%FT%T) -- sudo mkdir /mnt/backups"
 sudo mkdir /mnt/backups
 
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $source /backup
+# 12/28/2018 - EFS-21432 - EFS mount best practices
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $source /backup"
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $source /backup
 mount_src_status=$?
 echo "mount status for source efs: ${mount_src_status}"
 
-echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups"
-sudo mount -t nfs -o nfsvers=4.1 -o rsize=1048576 -o wsize=1048576 -o timeo=600 -o retrans=2 -o hard $destination /mnt/backups
+echo "-- $(date -u +%FT%T) -- sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $destination /mnt/backups"
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,timeo=600,retrans=2,hard,_netdev,noresvport $destination /mnt/backups
 mount_backup_status=$?
 echo "mount status for backup efs: ${mount_backup_status}"
 
@@ -60,10 +61,10 @@ echo "-- $(date -u +%FT%T) -- sudo yum -y install --enablerepo=epel tree"
 sudo yum -y install --enablerepo=epel tree
 echo "-- $(date -u +%FT%T) -- sudo yum -y groupinstall 'Development Tools'"
 sudo yum -y groupinstall "Development Tools"
-echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/solutions-features-reference/efs-backup/latest/fpart.zip"
-wget https://s3.amazonaws.com/solutions-features-reference/efs-backup/latest/fpart.zip
+echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/fpart.zip"
+wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/fpart.zip
 unzip fpart.zip
-cd fpart-fpart-0.9.3/
+cd fpart-fpart-1.0.0/
 autoreconf -i
 ./configure
 make
@@ -115,7 +116,7 @@ sudo rm /tmp/efs-backup.log
 # start fpsync process
 echo "Stating backup....."
 echo "-- $(date -u +%FT%T) --  sudo \"PATH=$PATH\" /usr/local/bin/fpsync -n $_thread_count -o \"-a --stats --numeric-ids --log-file=/tmp/efs-backup.log\" /backup/ /mnt/backups/$efsid/$interval.0/"
-sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-backup.log" /backup/ /mnt/backups/$efsid/$interval.0/ 1>/tmp/efs-fpsync.log
+sudo "PATH=$PATH" /usr/local/bin/fpsync -n $_thread_count -v -o "-a --stats --numeric-ids --log-file=/tmp/efs-backup.log" /backup/ /mnt/backups/$efsid/$interval.0/ &>/tmp/efs-fpsync.log
 fpsyncStatus=$?
 echo "fpsyncStatus:$fpsyncStatus"
 

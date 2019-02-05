@@ -51,17 +51,10 @@ if [ "$_err_61" != "efs_mount_ip_not_found" ] && [ "$_err_62" != "efs_not_mounte
   echo "-- $(date -u +%FT%T) -- kill with SIGTERM, status: $?"
 
   if sudo test -e /tmp/efs-fpsync.log; then
-    # echo "-- $(date -u +%FT%T) -- killing child rsync processes, may take up to 15 minutes"
-    # _to1=$((SECONDS+900))
-    # until cat /tmp/efs-fpsync.log | grep -Po '\d+(?=%)'
-    # do
-    #   # timeout after 900 SECONDS
-    #   if [ $SECONDS -gt $_to1 ]; then
-    #     break
-    #   fi
-    # done
-    # _backup_percentage=$(cat /tmp/efs-fpsync.log | grep -Po '\d+(?=%)')
-    echo "-- $(date -u +%FT%T) -- exiting loop"
+    echo "-- $(date -u +%FT%T) -- /tmp/efs-fpsync.log exists"
+    echo "-- $(date -u +%FT%T) -- uploading fpsync output logs"
+    aws s3 cp /tmp/efs-fpsync.log s3://${_s3bucket}/efs-backup-logs/${_folder_label}-fpsync-output-`date +%Y%m%d-%H%M`.log
+    echo "-- $(date -u +%FT%T) -- upload fpsync output logs to S3 status: $?"
   else
     echo "-- $(date -u +%FT%T) -- /tmp/efs-fpsync.log file does not exist"
     # this means cp -al did not complete or fpsync process did not initiate
@@ -136,7 +129,6 @@ if [ "$_err_61" != "efs_mount_ip_not_found" ] && [ "$_err_62" != "efs_not_mounte
     echo "-- $(date -u +%FT%T) -- backup completed successfully (id: ${_backup_id})"
     _rsync_delete_start=$(cat /var/log/cloud-init-output.log | grep 'rsync_delete_start' | cut -d: -f2-)
     _rsync_delete_stop=$(cat /var/log/cloud-init-output.log | grep 'rsync_delete_stop' | cut -d: -f2-)
-
     aws dynamodb update-item --table-name ${_ddb_table_name} --key '{"BackupId":{"S":"'${_backup_id}'"}}' --update-expression "SET BackupStatus = :q, NumberOfFiles = :n1, NumberOfFilesTransferred = :n2, TotalFileSize = :f1, TotalTransferredFileSize = :f2, BackupStopTime = :t, RemoveSnapshotStartTime = :rm1, RemoveSnapshotStopTime = :rm2, CreateHardlinksStartTime = :hl1, CreateHardlinksStopTime = :hl2, RsyncDeleteStartTime = :rd1, RsyncDeleteStopTime = :rd2, SourceBurstCreditBalancePostBackup = :cb1, EC2Logs = :log" --expression-attribute-values '{":q": {"S":"Success"}, ":n1": {"N":"'$_nofs'"}, ":n2": {"N":"'$_nfst'"}, ":f1": {"N":"'$_tfs'"}, ":f2": {"N":"'$_ttfs'"}, ":t": {"S":"'$_finish_time'"}, ":rm1": {"S":"'$_rm_start'"}, ":rm2": {"S":"'$_rm_stop'"}, ":hl1": {"S":"'$_hl_start'"}, ":hl2": {"S":"'$_hl_stop'"}, ":rd1": {"S":"'$_rsync_delete_start'"}, ":rd2": {"S":"'$_rsync_delete_stop'"}, ":cb1": {"N":"'$_src_efs_credit_balance'"}, ":log": {"S":"'$_log_location'"}}' --region $_region
     echo "-- $(date -u +%FT%T) -- dynamo db update status: $?"
   elif [ "$fpsyncStatus" == "0" ] && [ "$rsyncDeleteStatus" != "0" ] ; then

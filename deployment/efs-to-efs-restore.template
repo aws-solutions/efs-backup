@@ -107,8 +107,8 @@ Metadata:
       - Label:
           default: EC2 Configuration
         Parameters:
-          - Subnets
           - VpcId
+          - Subnets
           - SecurityGroupId
       - Label:
           default: Notification & Dashboard
@@ -168,6 +168,11 @@ Resources:
   #
   EFSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F1000
+            reason: "allowing all egress traffic"
     Properties:
       VpcId: !Sub ${VpcId}
       GroupDescription: !Sub SG for EFS backup solution ${AWS::StackName}
@@ -193,11 +198,18 @@ Resources:
       IamInstanceProfile: !Sub ${InstanceProfile}
       UserData:
         # download and run efs-restore script
+        # 12/28/2018 - EFS-21432 - adding retries for downloads
           Fn::Base64: !Sub |
             #!/bin/bash
-
-            wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-ec2-restore.sh -P /home/ec2-user
-            wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/latest/efs-restore-fpsync.sh -P /home/ec2-user
+            # V4488716 - 08/03/2018 - Support custom DHCP option
+            # https://github.com/awslabs/efs-backup/issues/1
+            cat <<EOT | sudo tee /etc/resolv.conf
+            search amazonaws.com
+            nameserver 169.254.169.253
+            EOT
+            
+            curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/efs-ec2-restore.sh -o /home/ec2-user/efs-ec2-restore.sh
+            curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/efs-restore-fpsync.sh -o /home/ec2-user/efs-restore-fpsync.sh
 
             chmod a+x /home/ec2-user/efs-ec2-restore.sh
             chmod a+x /home/ec2-user/efs-restore-fpsync.sh

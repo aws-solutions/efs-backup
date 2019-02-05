@@ -33,43 +33,6 @@ data protection and recoverability.
 ```python
 $ bash deployment/run-unit-tests.sh
 Installing dependencies using pip
-
-...output truncated...
-
-running pytest
-==================================================== test session starts =====================================================
-...output truncated...
-
-collected 26 items                                                                                                            
-
-source/tests/test_asg.py::test_start_instance PASSED
-source/tests/test_asg.py::test_stop_instance PASSED
-source/tests/test_asg.py::test_exception PASSED
-source/tests/test_cw.py::test_cw_returns_dict PASSED
-source/tests/test_cw.py::test_check_efs_metrics PASSED
-source/tests/test_cw.py::test_s3_returns_dict PASSED
-source/tests/test_cw.py::test_check_s3_metrics PASSED
-source/tests/test_ddb.py::test_item_add_and_describe_and_update PASSED
-source/tests/test_ddb.py::test_write_item_exception PASSED
-source/tests/test_ddb.py::test_read_item_exception PASSED
-source/tests/test_efs.py::test_efs_size PASSED
-source/tests/test_efs.py::test_performance_mode PASSED
-source/tests/test_efs.py::test_size_method_exception PASSED
-source/tests/test_efs.py::test_performance_mode_method_exception PASSED
-source/tests/test_events.py::test_describe_target PASSED
-source/tests/test_events.py::test_create_event PASSED
-source/tests/test_events.py::test_add_target PASSED
-source/tests/test_events.py::test_delete_event PASSED
-source/tests/test_events.py::test_remove_target PASSED
-source/tests/test_events.py::test_get_lambda_arn PASSED
-source/tests/test_events.py::test_add_permission PASSED
-source/tests/test_events.py::test_remove_permission PASSED
-source/tests/test_notify.py::NotifyTest::test_backend_metrics PASSED
-source/tests/test_notify.py::NotifyTest::test_customer_notify PASSED
-source/tests/test_ssm.py::test_ssm_create_command PASSED
-source/tests/test_ssm.py::test_ssm_send_command PASSED
-
-================================================= 26 passed in 3.71 seconds ==================================================
 ```
 ***
 
