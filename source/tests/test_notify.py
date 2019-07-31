@@ -1,14 +1,14 @@
 from __future__ import unicode_literals
+
 import boto3
-from lib.notify import Notify
-from lib.logger import Logger
 from uuid import uuid4
-from moto.packages.responses import responses
 from moto import mock_sns
 from decimal import Decimal
 from unittest import TestCase
 from unittest import TestLoader
 from unittest import TextTestRunner
+from lib.notify import Notify
+from lib.logger import Logger
 
 log_level = 'info'
 logger = Logger(loglevel=log_level)
@@ -19,11 +19,6 @@ class NotifyTest(TestCase):
 
     @mock_sns
     def test_customer_notify(self):
-        responses.add(
-            method="POST",
-            url="http://example.com/foobar",
-        )
-
         conn = boto3.client('sns', region_name='us-east-1')
         conn.create_topic(Name="dummy-topic")
         response = conn.list_topics()

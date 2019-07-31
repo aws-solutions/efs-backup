@@ -1,5 +1,5 @@
 ######################################################################################################################
-#  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
+#  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
 #                                                                                                                    #
 #  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        #
 #  with the License. A copy of the License is located at                                                             #
@@ -13,8 +13,8 @@
 
 import json
 from datetime import datetime
-from urllib2 import Request
-from urllib2 import urlopen
+from urllib.request import Request
+from urllib.request import urlopen
 import boto3
 from decimal import Decimal
 
@@ -57,8 +57,12 @@ class Notify(object):
                       'Data': data}
             metrics = dict(time_stamp, **params)
             json_data = json.dumps(metrics, indent=4, cls=DecimalEncoder, sort_keys=True)
-            headers = {'content-type': 'application/json'}
-            req = Request(url, json_data, headers)
+            json_data_utf8 = json_data.encode('utf-8')
+            headers = {
+                'content-type': 'application/json; charset=utf-8',
+                'content-length': len(json_data_utf8)
+            }
+            req = Request(url, json_data_utf8, headers)
             rsp = urlopen(req)
             content = rsp.read()
             rsp_code = rsp.getcode()
@@ -67,8 +71,3 @@ class Notify(object):
             return rsp_code
         except Exception as e:
             self.logger.error("unhandled exception: Notify_metrics", exc_info=1)
-
-
-
-
-

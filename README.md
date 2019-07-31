@@ -142,7 +142,19 @@ Code Bucket Name:
 
 ***
 
-Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#### v1.4 changes
+
+```bash
+* upgrading Python code from version 2.7 to 3.7
+* updated unit tests
+* making encryption/access control changes to log bucket to be consistent with best practices
+* where applicable, adding constraints for parameters to make them required
+* adding security group to outputs in backup and restore templates
+```
+
+***
+
+Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
 

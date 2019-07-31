@@ -14,6 +14,8 @@ Parameters:
   SrcEFS:
     Description: Source EFS Id
     Type: String
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Interval tag for your backups; daily, weekly, monthly
   IntervalTag:
@@ -63,18 +65,20 @@ Parameters:
 
   # Schedule for the backup, cron(0 2 * * ? *)
   BackupSchedule:
-    Description: Schedule for running backup
+    Description: "Schedule for running backup. Note: Backup operations should not overlap--especially if scheduling more frequent than daily, take into consideration how long a backup usually takes on the given dataset."
     Type: String
     Default: cron(0 2 * * ? *)
-    ConstraintDescription: No frequent than daily backup
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Source EFS Prefix which you want to backup
   BackupPrefix:
     Description: Source prefix for backup
     Type: String
     Default: '/'
-    ConstraintDescription: specify single prefix for backup
-
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
+    
   # Performance mode for backup EFS
   EFSMode:
     Description: Performance mode for backup EFS
@@ -97,17 +101,22 @@ Parameters:
   VpcId:
     Description: VPC where the source EFS has mount targets
     Type: AWS::EC2::VPC::Id
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2)
   Subnets:
-    Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets(Choose 2)
+    Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2).  Must specify subnets in different AZs.
     Type: List<AWS::EC2::Subnet::Id>
-    ConstraintDescription: must specify subnets in different AZs
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Email for notifications
   Email:
     Description: Email for backup notifications
     Type: String
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # CW Dashboard
   Dashboard:
@@ -218,6 +227,11 @@ Resources:
 
   EFSIngressRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W36
+            reason: "adding description causes replace during CFN update, causing a stack creation error"
     Properties:
       FromPort: -1
       GroupId: !Sub ${EFSSecurityGroup}
@@ -341,11 +355,16 @@ Resources:
       Code:
         S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
         S3Key: efs-backup/%VERSION%/efs_to_efs_backup.zip
-      Runtime: python2.7
+      Runtime: python3.7
       Timeout: 300
 
   EFSDynamoDB:
     Type: AWS::DynamoDB::Table
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "leaving table name as is to prevent replacement during stack update"
     Properties:
         SSESpecification:
           SSEEnabled: true
@@ -364,11 +383,25 @@ Resources:
 
   EFSLogBucket:
     Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "for this bucket, access logging does not currently add significant value"
     Properties:
       VersioningConfiguration:
         Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
     DeletionPolicy: Retain
-
 
   #
   # Cloudwatch events/rule resources
@@ -445,6 +478,11 @@ Resources:
   #
   OrchestratorRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "resource level permission not allowed"
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -530,6 +568,11 @@ Resources:
 
   EC2RolePolicies:
     Type: AWS::IAM::Policy
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W12
+            reason: "resource level permission not allowed"
     Properties:
       PolicyName: !Sub ${AWS::StackName}-${AWS::Region}
       PolicyDocument:
@@ -575,6 +618,11 @@ Resources:
   #
   SolutionHelperRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "resource level permission not allowed"
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -628,9 +676,9 @@ Resources:
       Description: EFS Backup - This function is a CloudFormation custom lambda resource that
         generates UUID for each deployment.
       Code:
-       S3Bucket: !Sub solutions-${AWS::Region}
-       S3Key: library/solution-helper/v3/solution-helper.zip
-      Runtime: python2.7
+        S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
+        S3Key: efs-backup/%VERSION%/efs_to_efs_backup.zip
+      Runtime: python3.7
       Timeout: 300
 
   CreateUniqueID:
@@ -638,7 +686,6 @@ Resources:
     Properties:
       ServiceToken: !Sub ${SolutionHelper.Arn}
       Region: !Sub ${AWS::Region}
-      CreateUniqueID: 'true'
 
 Outputs:
   UUID:
@@ -669,3 +716,7 @@ Outputs:
   AmiId:
     Description: Ami Id vended in template
     Value: !GetAtt AMIInfo.Id
+
+  EFSSecurityGroup:
+    Description: Backup EFS security group
+    Value: !Ref EFSSecurityGroup

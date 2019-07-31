@@ -1,5 +1,5 @@
 ######################################################################################################################
-#  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
+#  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
 #                                                                                                                    #
 #  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        #
 #  with the License. A copy of the License is located at                                                             #
@@ -27,14 +27,14 @@ def zip_function(zip_file_name, function_path, output_path, exclude_list):
             pass
     zip_file = zipfile.ZipFile(zip_name, mode='a')
     os.chdir(function_path)
-    print '\n Following files will be zipped in {} and saved in the deployment/dist folder. \n--------------' \
-          '------------------------------------------------------------------------'.format(zip_name)
+    print('\n Following files will be zipped in {} and saved in the deployment/dist folder. \n--------------' \
+          '------------------------------------------------------------------------'.format(zip_name))
     for folder, subs, files in os.walk('.'):
         for filename in files:
             fpath = os.path.join(folder, filename)
             if fpath.endswith('.py') or fpath.endswith('.sh') or '.so' in fpath:
                 if not any(x in fpath for x in exclude_list):
-                    print fpath
+                    print(fpath)
                     zip_file.write(fpath)
     zip_file.close()
     os.chdir(orig_path)
@@ -44,9 +44,9 @@ def make_dir(directory):
     # if exist skip else create dir
     try:
         os.stat(directory)
-        print "\n Directory {} already exist... skipping".format(directory)
+        print("\n Directory {} already exist... skipping".format(directory))
     except:
-        print "\n Directory {} not found, creating now...".format(directory)
+        print("\n Directory {} not found, creating now...".format(directory))
         os.makedirs(directory)
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ def test_check_efs_metrics(mocker):
     mocker.patch.object(cw, 'efs_cw_metrics')
     cw.efs_cw_metrics.return_value = efs_metrics_response
     cw.efs_cw_metrics('fake_efs_id', 'src')
-    for key, value in efs_metrics_response.iteritems():
+    for key, value in efs_metrics_response.items():
         assert type(value) == Decimal
 
 s3_metric_response = {'Datapoints': [

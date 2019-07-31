@@ -11,51 +11,47 @@
 #  and limitations under the License.                                                                                #
 ######################################################################################################################
 
+from pycfn_custom_resource.lambda_backed import CustomResource
+import logging
+import uuid
+import json
 import boto3
-from json import dumps, JSONEncoder
-from decimal import Decimal
 
-dynamodb_client = boto3.resource('dynamodb')
+log = logging.getLogger()
+log.setLevel(logging.INFO)
 
-class DecimalEncoder(JSONEncoder):
-    def default(self, o):
-        if isinstance(o, Decimal):
-            if o % 1 > 0:
-                return float(o)
-            else:
-                return int(o)
-        return super(DecimalEncoder, self).default(o)
+class SolutionHelperResource(CustomResource):
+    def __init__(self, event):
+        super(SolutionHelperResource, self).__init__(event)
 
-
-class DDB(object):
-    def __init__(self, logger, table_name):
-        self.logger = logger
-        self.table_name = table_name
-        self.table = dynamodb_client.Table(self.table_name)
-
-    # DDB API call to get an item
-    def read_item(self, key, value):
+    def generateId(self):
         try:
-            response = self.table.get_item(
-                Key={
-                    key: value
-                }
-            )
-            item = response['Item']
-            self.logger.info('DynamoDB Item')
-            self.logger.info(dumps(item, indent=4, cls=DecimalEncoder))
-            return item
-        except Exception as e:
-            self.logger.error("unhandled exception: DDB_read_item", exc_info=1)
-            return 'unhandled exception get'
+            # Value of CreateUniqueID does not matter
+            log.info("Creating Unique ID")
+            # Generate new random Unique ID
+            newID = uuid.uuid4()
 
-    # DDB API call to put an item
-    def write_item(self, item):
-        try:
-            response = self.table.put_item(
-                Item=item
-            )
+            response = {"Status": "SUCCESS", "UUID": str(newID)}
+            log.debug("%s", response)
+
+            # Results dict referenced by GetAtt in template
             return response
+
         except Exception as e:
-            self.logger.error("unhandled exception: DDB_write_item", exc_info=1)
-            return 'unhandled exception put'
+            log.error("Exception: %s", e)
+            return {"Status": "FAILED", "Reason": str(e)}
+
+    def create(self):
+        return self.generateId()
+
+    def update(self):
+        return self.generateId()
+
+    def delete(self):
+        # Nothing for delete to do--just return success.
+        return {"Status": "SUCCESS" }
+
+def lambda_handler(event, context):
+    resource = SolutionHelperResource(event)
+    resource.process_event()
+    return {'message': 'done'}

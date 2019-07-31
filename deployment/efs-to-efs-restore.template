@@ -14,11 +14,15 @@ Parameters:
   SrcEFS:
     Description: Source EFS Id
     Type: String
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Backup EFS from where restore will be performed
   DstEFS:
     Description: Backup EFS Id
     Type: String
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Interval tag which you want to restore
   IntervalTag:
@@ -47,39 +51,50 @@ Parameters:
     Description: Source prefix for restore
     Type: String
     Default: '/'
-    ConstraintDescription: specify single prefix for restore
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Sub directory that you want to restore
   RestoreSubDir:
-    Description: Sub directory for restore, eg. /dir_x/; must have trailing '/'
+    Description: Sub directory for restore, eg. /dir_x/; must have trailing '/'.  Leave default if you want entire backup to be restored.
     Type: String
     Default: '/'
-    ConstraintDescription: leave default if you want entire backup to be restored
+    AllowedPattern: (.+)*/
+    ConstraintDescription: must have trailing '/'
 
   # VPC where the source/destination EFS resides
   VpcId:
     Description: VPC where the source/destination EFS mount targets reside
     Type: AWS::EC2::VPC::Id
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
-  # List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets
+  # List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2)
   Subnets:
-    Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2)
+    Description: List of SubnetIDs for EC2, must be same AZ as of EFS Mount Targets (Choose 2).  Must specify subnets in different AZs.
     Type: List<AWS::EC2::Subnet::Id>
-    ConstraintDescription: must specify subnets in different AZs
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   SecurityGroupId:
     Description: The ID of an existing EC2 SecurityGroup in your Virtual Private Cloud (VPC), which should provide access to your existing EFS
     Type: AWS::EC2::SecurityGroup::Id
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Bucket where restore logs will be saved
   RestoreLogBucket:
     Description: Bucket to store restore logs (use the same bucket as Backup)
     Type: String
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # Email for restore notifications
   Email:
     Description: Email for restore notifications
     Type: String
+    AllowedPattern: .+
+    ConstraintDescription: cannot be blank
 
   # CW Dashboard
   Dashboard:
@@ -179,6 +194,11 @@ Resources:
 
   EFSIngressRule:
     Type: AWS::EC2::SecurityGroupIngress
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W36
+            reason: "adding description causes replace during CFN update, causing a stack creation error"
     Properties:
       FromPort: -1
       GroupId: !Sub ${EFSSecurityGroup}
@@ -250,6 +270,11 @@ Resources:
 
   EC2RolePolicies:
     Type: AWS::IAM::Policy
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W12
+            reason: "resource level permission not allowed"
     Properties:
       PolicyName: !Sub ${AWS::StackName}-${AWS::Region}
       PolicyDocument:
@@ -289,6 +314,11 @@ Resources:
   #
   HelperRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "resource level permission not allowed"
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -370,3 +400,7 @@ Outputs:
   AmiId:
     Description: Ami Id vended in template
     Value: !GetAtt AMIInfo.Id
+
+  EFSSecurityGroup:
+    Description: Restore EFS security group
+    Value: !Ref EFSSecurityGroup

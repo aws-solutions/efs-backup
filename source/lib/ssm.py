@@ -1,5 +1,5 @@
 ######################################################################################################################
-#  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
+#  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
 #                                                                                                                    #
 #  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        #
 #  with the License. A copy of the License is located at                                                             #
@@ -39,7 +39,7 @@ class SimpleSystemsManager(object):
             f = 'ssm.sh'
             with open(os.path.join(src_dir, f)) as file:
                 for line in file:
-                    for src, target in replace_dict.iteritems():
+                    for src, target in replace_dict.items():
                         line = line.replace(src, target)
                     lines.append(line)
             return lines

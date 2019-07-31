@@ -24,7 +24,6 @@ def test_ssm_create_command():
     response = ssm.create_command(replace_dict)
     for line in response:
         if '${_' in line and '{_az' not in line:
-            print line
             status = 'fail'
         else:
             status = 'pass'
