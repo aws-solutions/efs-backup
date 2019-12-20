@@ -7,7 +7,7 @@
 
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: (SO0031) - EFS-to-EFS Backup Solution template
+Description: (SO0031) - EFS-to-EFS Backup Solution template. Version %%VERSION%%
 
 Parameters:
   # Source EFS on which restore will be performed
@@ -78,7 +78,7 @@ Parameters:
     Default: '/'
     AllowedPattern: .+
     ConstraintDescription: cannot be blank
-    
+
   # Performance mode for backup EFS
   EFSMode:
     Description: Performance mode for backup EFS
@@ -205,6 +205,10 @@ Mappings:
     ap-northeast-2: {"InstanceSize":"c5.xlarge"}
     ap-south-1: {"InstanceSize":"c5.xlarge"}
     sa-east-1: {"InstanceSize":"c5.xlarge"}
+  SourceCode:
+    General:
+      S3Bucket: "%%BUCKET_NAME%%"
+      KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
 
 Conditions:
   DashboardOpt: !Equals [ !Ref Dashboard, "Yes" ]
@@ -232,12 +236,13 @@ Resources:
         rules_to_suppress:
           - id: W36
             reason: "adding description causes replace during CFN update, causing a stack creation error"
+          - id: W42
+            reason: Allowing ICMP within the same security group only
     Properties:
       FromPort: -1
       GroupId: !Sub ${EFSSecurityGroup}
       IpProtocol: -1
       SourceSecurityGroupId: !Sub ${EFSSecurityGroup}
-      SourceSecurityGroupOwnerId: String
       ToPort: -1
 
   DstEFS:
@@ -281,26 +286,29 @@ Resources:
       UserData:
         # download and run efs-backup script
         # 12/28/2018 - EFS-21432 - adding retries for downloads
-          Fn::Base64: !Sub |
-           #!/bin/bash
-           # sudo yum install amazon-ssm-agent -y
-           sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
-           sudo start amazon-ssm-agent
-           
-           # SIM:V4488716 - 08/03/2018 - Support custom DHCP option
-           # https://github.com/awslabs/efs-backup/issues/1
-           cat <<EOT | sudo tee /etc/resolv.conf
-           search amazonaws.com
-           nameserver 169.254.169.253
-           EOT
-           
-           curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/efs-ec2-backup.sh -o /home/ec2-user/efs-ec2-backup.sh
-           curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/efs-backup-fpsync.sh -o /home/ec2-user/efs-backup-fpsync.sh
+          Fn::Base64: !Sub
+            - |
+              #!/bin/bash
+              # sudo yum install amazon-ssm-agent -y
+              sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+              sudo start amazon-ssm-agent
 
-           chmod a+x /home/ec2-user/efs-ec2-backup.sh
-           chmod a+x /home/ec2-user/efs-backup-fpsync.sh
+              # SIM:V4488716 - 08/03/2018 - Support custom DHCP option
+              # https://github.com/awslabs/efs-backup/issues/1
+              cat <<EOT | sudo tee /etc/resolv.conf
+              search amazonaws.com
+              nameserver 169.254.169.253
+              EOT
 
-           /home/ec2-user/efs-ec2-backup.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${Retain} ${FolderLabel} ${BackupPrefix}
+              curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.${AWS::Region}.amazonaws.com/${S3Bucket}-${AWS::Region}/${KeyPrefix}/efs-ec2-backup.sh -o /home/ec2-user/efs-ec2-backup.sh
+              curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.${AWS::Region}.amazonaws.com/${S3Bucket}-${AWS::Region}/${KeyPrefix}/efs-backup-fpsync.sh -o /home/ec2-user/efs-backup-fpsync.sh
+
+              chmod a+x /home/ec2-user/efs-ec2-backup.sh
+              chmod a+x /home/ec2-user/efs-backup-fpsync.sh
+
+              /home/ec2-user/efs-ec2-backup.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${Retain} ${FolderLabel} ${BackupPrefix}
+            - S3Bucket: !FindInMap ["SourceCode", "General", "S3Bucket"]
+              KeyPrefix: !FindInMap ["SourceCode", "General", "KeyPrefix"]
 
   EFSAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -353,9 +361,9 @@ Resources:
       Handler: orchestrator.lambda_handler
       Role: !Sub ${OrchestratorRole.Arn}
       Code:
-        S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
-        S3Key: efs-backup/%VERSION%/efs_to_efs_backup.zip
-      Runtime: python3.7
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "efs_to_efs_backup.zip"]]
+      Runtime: python3.8
       Timeout: 300
 
   EFSDynamoDB:
@@ -374,7 +382,7 @@ Resources:
         KeySchema:
           - AttributeName: BackupId
             KeyType: HASH
-        # 12/28/2018 - EFS-21432 - DynamoDB on-demand capacity    
+        # 12/28/2018 - EFS-21432 - DynamoDB on-demand capacity
         BillingMode: PAY_PER_REQUEST
         TimeToLiveSpecification:
           AttributeName: ExpireItem
@@ -388,6 +396,8 @@ Resources:
         rules_to_suppress:
           - id: W35
             reason: "for this bucket, access logging does not currently add significant value"
+          - id: W51
+            reason: The bucket is restricted from publis, so bucket policy is not needed.
     Properties:
       VersioningConfiguration:
         Status: Enabled
@@ -467,6 +477,7 @@ Resources:
   SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
+      KmsMasterKeyId: "alias/aws/sns"
       Subscription:
       - Protocol: email
         Endpoint: !Sub ${Email}
@@ -516,8 +527,7 @@ Resources:
             Action:
             - elasticfilesystem:DescribeFileSystems
             Resource:
-            - !Sub arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/${SrcEFS}
-            - !Sub arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/${DstEFS}
+            - !Sub arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/*
           - Effect: Allow
             Action:
             - events:DeleteRule
@@ -563,8 +573,6 @@ Resources:
           Action:
           - sts:AssumeRole
       Path: "/"
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
 
   EC2RolePolicies:
     Type: AWS::IAM::Policy
@@ -601,6 +609,35 @@ Resources:
           Action:
           - ec2:DescribeTags
           Resource: '*'
+        # From the managed policy: AmazonSSMManagedInstanceCore
+        - Effect: Allow
+          Action:
+            - ssm:DescribeAssociation
+            - ssm:GetDeployablePatchSnapshotForInstance
+            - ssm:GetDocument
+            - ssm:DescribeDocument
+            - ssm:GetManifest
+            - ssm:GetParameter
+            - ssm:GetParameters
+            - ssm:ListAssociations
+            - ssm:ListInstanceAssociations
+            - ssm:PutInventory
+            - ssm:PutComplianceItems
+            - ssm:PutConfigurePackageResult
+            - ssm:UpdateAssociationStatus
+            - ssm:UpdateInstanceAssociationStatus
+            - ssm:UpdateInstanceInformation
+            - ssmmessages:CreateControlChannel
+            - ssmmessages:CreateDataChannel
+            - ssmmessages:OpenControlChannel
+            - ssmmessages:OpenDataChannel
+            - ec2messages:AcknowledgeMessage
+            - ec2messages:DeleteMessage
+            - ec2messages:FailMessage
+            - ec2messages:GetEndpoint
+            - ec2messages:GetMessages
+            - ec2messages:SendReply
+          Resource: "*"
       Roles:
       - !Sub ${EC2Role}
 
@@ -652,10 +689,10 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
-        S3Key: efs-backup/%VERSION%/amilookup.zip
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "amilookup.zip"]]
       Handler: amilookup.handler
-      Runtime: nodejs8.10
+      Runtime: nodejs12.x
       Timeout: 120
       Description: EFS Backup - This function is CloudFormation custom lambda resource that
          looks up the latest AMI ID.
@@ -676,9 +713,9 @@ Resources:
       Description: EFS Backup - This function is a CloudFormation custom lambda resource that
         generates UUID for each deployment.
       Code:
-        S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
-        S3Key: efs-backup/%VERSION%/efs_to_efs_backup.zip
-      Runtime: python3.7
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "efs_to_efs_backup.zip"]]
+      Runtime: python3.8
       Timeout: 300
 
   CreateUniqueID:
@@ -686,6 +723,17 @@ Resources:
     Properties:
       ServiceToken: !Sub ${SolutionHelper.Arn}
       Region: !Sub ${AWS::Region}
+
+  SendAnonymousMetrics:
+    Type: Custom::SendAnonymousMetrics
+    Properties:
+      ServiceToken: !Sub ${SolutionHelper.Arn}
+      Region: !Sub ${AWS::Region}
+      SolutionId: SO0031
+      SolutionVersion: "%%VERSION%%"
+      SolutionUuid: !GetAtt CreateUniqueID.UUID
+      EventType: backup
+      SendAnonymousMetrics: !FindInMap [Map, send-data, SendAnonymousData]
 
 Outputs:
   UUID:

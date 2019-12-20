@@ -16,9 +16,9 @@ echo "-- $(date -u +%FT%T) -- sudo yum -y install nfs-utils"
 sudo yum -y install nfs-utils
 echo "-- $(date -u +%FT%T) -- sudo yum -y groupinstall 'Development Tools'"
 sudo yum -y groupinstall "Development Tools"
-echo "-- $(date -u +%FT%T) -- wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/fpart.zip"
-wget https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/fpart.zip
-unzip fpart.zip
+echo '-- $(date -u +%FT%T) -- wget https://github.com/martymac/fpart/archive/fpart-1.0.0.zip'
+wget https://github.com/martymac/fpart/archive/fpart-1.0.0.zip
+unzip fpart-1.0.0.zip
 cd fpart-fpart-1.0.0/
 autoreconf -i
 ./configure

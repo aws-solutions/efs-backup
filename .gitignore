@@ -1,0 +1,12 @@
+.idea
+.DS_Store
+source/scratch/
+.idea/
+*.jpg
+*.pyc
+.eggs
+efs_backup_solution.egg-info
+.cache
+**/global-s3-assets
+**/regional-s3-assets
+**/open-source

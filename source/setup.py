@@ -12,7 +12,7 @@ tests_requires = [
 
 setup(
     name='efs-backup-solution',
-    version='1.0.0',
+    version='1.4.1',
     description='AWS EFS to AWS EFS backup',
     author='Lalit G.',
     url='https://github.com/awslabs/aws-efs-backup',
@@ -23,6 +23,6 @@ setup(
     tests_require=tests_requires,
     setup_requires=['pytest-runner'],
     classifiers=[
-        "Programming Language :: Python :: 3.7"
+        "Programming Language :: Python :: 3.8"
     ],
 )

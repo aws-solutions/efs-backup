@@ -7,7 +7,7 @@
 
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: (SO0031R) - EFS-to-EFS Backup Solution template
+Description: (SO0031R) - EFS-to-EFS Backup Solution template. Version %%VERSION%%
 
 Parameters:
   # Source EFS on which restore will be performed
@@ -172,6 +172,10 @@ Mappings:
     ap-northeast-2: {"InstanceSize":"c5.xlarge"}
     ap-south-1: {"InstanceSize":"c5.xlarge"}
     sa-east-1: {"InstanceSize":"c5.xlarge"}
+  SourceCode:
+    General:
+      S3Bucket: "%%BUCKET_NAME%%"
+      KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
 
 Conditions:
   DashboardOpt: !Equals [ !Ref Dashboard, "Yes" ]
@@ -199,12 +203,13 @@ Resources:
         rules_to_suppress:
           - id: W36
             reason: "adding description causes replace during CFN update, causing a stack creation error"
+          - id: W42
+            reason: Allowing ICMP within the same security group only
     Properties:
       FromPort: -1
       GroupId: !Sub ${EFSSecurityGroup}
       IpProtocol: -1
       SourceSecurityGroupId: !Sub ${EFSSecurityGroup}
-      SourceSecurityGroupOwnerId: String
       ToPort: -1
 
   RestoreInstanceLaunchConfig:
@@ -219,22 +224,25 @@ Resources:
       UserData:
         # download and run efs-restore script
         # 12/28/2018 - EFS-21432 - adding retries for downloads
-          Fn::Base64: !Sub |
-            #!/bin/bash
-            # V4488716 - 08/03/2018 - Support custom DHCP option
-            # https://github.com/awslabs/efs-backup/issues/1
-            cat <<EOT | sudo tee /etc/resolv.conf
-            search amazonaws.com
-            nameserver 169.254.169.253
-            EOT
-            
-            curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/efs-ec2-restore.sh -o /home/ec2-user/efs-ec2-restore.sh
-            curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.amazonaws.com/%TEMPLATE_BUCKET_NAME%/efs-backup/%VERSION%/efs-restore-fpsync.sh -o /home/ec2-user/efs-restore-fpsync.sh
+          Fn::Base64: !Sub
+            - |
+              #!/bin/bash
+              # V4488716 - 08/03/2018 - Support custom DHCP option
+              # https://github.com/awslabs/efs-backup/issues/1
+              cat <<EOT | sudo tee /etc/resolv.conf
+              search amazonaws.com
+              nameserver 169.254.169.253
+              EOT
 
-            chmod a+x /home/ec2-user/efs-ec2-restore.sh
-            chmod a+x /home/ec2-user/efs-restore-fpsync.sh
+              curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.${AWS::Region}.amazonaws.com/${S3Bucket}-${AWS::Region}/${KeyPrefix}/efs-ec2-restore.sh -o /home/ec2-user/efs-ec2-restore.sh
+              curl --connect-timeout 5 --speed-time 5 --retry 10  --retry-delay 5 https://s3.${AWS::Region}.amazonaws.com/${S3Bucket}-${AWS::Region}/${KeyPrefix}/efs-restore-fpsync.sh -o /home/ec2-user/efs-restore-fpsync.sh
 
-            /home/ec2-user/efs-ec2-restore.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${BackupNum} ${FolderLabel} ${RestorePrefix} ${RestoreSubDir} ${RestoreLogBucket} ${SNSTopic}
+              chmod a+x /home/ec2-user/efs-ec2-restore.sh
+              chmod a+x /home/ec2-user/efs-restore-fpsync.sh
+
+              /home/ec2-user/efs-ec2-restore.sh ${SrcEFS} ${DstEFS} ${IntervalTag} ${BackupNum} ${FolderLabel} ${RestorePrefix} ${RestoreSubDir} ${RestoreLogBucket} ${SNSTopic}
+            - S3Bucket: !FindInMap ["SourceCode", "General", "S3Bucket"]
+              KeyPrefix: !FindInMap ["SourceCode", "General", "KeyPrefix"]
 
   RestoreAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -348,10 +356,10 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Sub %DIST_BUCKET_NAME%-${AWS::Region}
-        S3Key: efs-backup/%VERSION%/amilookup.zip
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "amilookup.zip"]]
       Handler: amilookup.handler
-      Runtime: nodejs8.10
+      Runtime: nodejs12.x
       Timeout: 120
       Description: EFS Backup - This function is CloudFormation custom lambda resource that
          looks up the latest AMI ID.
@@ -364,6 +372,35 @@ Resources:
       Region: !Ref "AWS::Region"
       Architecture: !FindInMap [Map, !FindInMap [Map, !Ref "AWS::Region", "InstanceSize"], "Arch"]
 
+  SolutionHelper:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: solution-helper.lambda_handler
+      Role: !Sub ${HelperRole.Arn}
+      Description: EFS Backup - This function is a CloudFormation custom lambda resource that
+        generates UUID for each deployment.
+      Code:
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "efs_to_efs_backup.zip"]]
+      Runtime: python3.8
+      Timeout: 300
+
+  CreateUniqueID:
+    Type: Custom::CreateUniqueID
+    Properties:
+      ServiceToken: !Sub ${SolutionHelper.Arn}
+      Region: !Sub ${AWS::Region}
+
+  SendAnonymousMetrics:
+    Type: Custom::SendAnonymousMetrics
+    Properties:
+      ServiceToken: !Sub ${SolutionHelper.Arn}
+      Region: !Sub ${AWS::Region}
+      SolutionId: SO0031
+      SolutionVersion: "%%VERSION%%"
+      SolutionUuid: !GetAtt CreateUniqueID.UUID
+      EventType: restore
+      SendAnonymousMetrics: !FindInMap [Map, send-data, SendAnonymousData]
 
   #
   # Dashboard and Notification resources
@@ -379,6 +416,7 @@ Resources:
   SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
+      KmsMasterKeyId: "alias/aws/sns"
       Subscription:
       - Protocol: email
         Endpoint: !Sub ${Email}

@@ -23,141 +23,52 @@ data protection and recoverability.
 
 •	The EC2 successful termination trigger another lifecycle hook event. This event triggers the orchestrator lambda function to send the anonymous metrics, notify customer if complete backup was not done.
 
-
-
 ### Setup
 
 #### Run Unit Tests (pytest)
 *Note: Use **sudo** if necessary to install python dependencies*
 
-```python
+```bash
 $ bash deployment/run-unit-tests.sh
-Installing dependencies using pip
 ```
 ***
 
 #### Build S3 Assets
 
+* Configure the build paraemters.
 ```bash
-$ bash deployment/build-s3-dist.sh {code-bucket-name} {cf-template-bucket-name} {version-number}
-python source/scripts/lambda_build.py
-
- Directory ../../deployment/dist not found, creating now...
-
- Following files will be zipped in efs_to_efs_backup.zip and saved in the deployment/dist folder.
---------------------------------------------------------------------------------------
-./orchestrator.py
-./lib/__init__.py
-./lib/asg.py
-./lib/cloudwatch.py
-./lib/dynamodb.py
-./lib/efs.py
-./lib/events.py
-./lib/logger.py
-./lib/notify.py
-./lib/ssm.py
-./lib/ssm.sh
-cp -f deployment/efs*.template deployment/dist
-Updating code source bucket in template with solutions
-sed -i '' -e s/%DIST_BUCKET_NAME%/solutions/g deployment/dist/efs-backup.template
-sed -i '' -e s/%DIST_BUCKET_NAME%/solutions/g deployment/dist/efs-restore.template
-Updating template bucket in template with solutions-reference
-sed -i '' -e s/%TEMPLATE_BUCKET_NAME%/solutions-reference/g deployment/dist/efs-backup.template
-sed -i '' -e s/%TEMPLATE_BUCKET_NAME%/solutions-reference/g deployment/dist/efs-restore.template
-Updating version number in the template with v1.0
-sed -i '' -e s/%VERSION%/v1.0/g deployment/dist/efs-to-efs-backup.template
-sed -i '' -e s/%VERSION%/v1.0/g deployment/dist/efs-to-efs-restore.template
-Download the fpart package from github
-wget https://github.com/martymac/fpart/archive/fpart-0.9.3.zip; mv fpart-0.9.3.zip fpart.zip
-https://codeload.github.com/martymac/fpart/zip/fpart-0.9.3
-Resolving codeload.github.com (codeload.github.com)...
-Connecting to codeload.github.com (codeload.github.com)|... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: unspecified [application/zip]
-Saving to: 'fpart-0.9.3.zip'
-0K .......... .......... .......... .......... .......... 14.3M
-50K .......... .......... .... 15.4M=0.005s
-(14.6 MB/s) - 'fpart-0.9.3.zip' saved [76187]
-cp source/scripts/efs-* deployment/dist
-
-$ ls -l deployment/dist     
--rw-r--r--      efs-backup-fpsync.sh
--rw-r--r--      efs-backup.template
--rw-r--r--      efs-ec2-backup.sh
--rw-r--r--      efs-ec2-restore.sh
--rw-r--r--      efs-restore-fpsync.sh
--rw-r--r--      efs-restore.template
--rw-r--r--      efs_to_efs_backup.zip
--rw-r--r--      fpart.zip
--rw-r--r--      amilookup.zip
+export EFS_BACKUP_PATH=`pwd`
+export DIST_OUTPUT_BUCKET=my-bucket-name # bucket where customized code will reside
+export VERSION=my-version # version number for the customized code
+export SOLUTION_NAME=efs-backup # solution name for the customized code
 ```
-***
+_Note:_ You would have to create an S3 bucket with the prefix 'my-bucket-name-<aws_region>' as whole Lambda functions are going to get the source codes from the 'my-bucket-name-<aws_region>' bucket; aws_region is where you are deployting the customized solution (e.g. us-east-1, us-east-2, etc.).
 
-#### S3 Bucket Structure
-
+* Build the customized solution
 ```bash
-CloudFormation Template Bucket
-- Copy following assets to {cf-template-bucket-name}:
-    * efs-restore.template
-    * efs-backup.template
-    * efs-restore-fpsync.sh
-    * efs-ec2-restore.sh
-    * efs-ec2-backup.sh
-    * efs-backup-fpsync.sh
-
-Code Bucket Name:
-- Copy following assets to {code-bucket-name}-<AWS_REGION_NAME>:
-    * efs_to_efs_backup.zip
-    * amilookup.zip
+cd $EFS_BACKUP_PATH/deployment
+chmod +x ./build-s3-dist.sh
+./build-s3-dist.sh $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
 ```
 
-***
-
-#### v1.2 changes
-
+* Deploy the source codes to an Amazon S3 bucket in your account. _Note:_ You must have the AWS Command Line Interface installed and create the Amazon S3 bucket in your account prior to copy source codes.
 ```bash
-* fixed timeout issue with custom lambda resource fetching latest AMI
-* removed duplicate line in efs-to-efs-backup.template
-* error handling for efs mount targets not mounted
-* fixed false notification when efs mount targets not mounted
-* added support for restoring sub directory from the backup
-* backup window provided in form of drop down menu to avoid input errors
-* parallelized removal of snapshot in ec2-backup-fpsync.sh
-* improved overall backup and restore experience
+export AWS_REGION=us-east-1 # the AWS region you are going to deploy the solution in your account.
+export AWS_PROFILE=default # the AWS Command Line Interface profile
+
+aws s3 cp $EFS_BACKUP_PATH/deployment/global-s3-assets/ s3://$DIST_OUTPUT_BUCKET-$AWS_REGION/$SOLUTION_NAME/$VERSION/ --recursive --acl bucket-owner-full-control --profile $AWS_PROFILE
+aws s3 cp $EFS_BACKUP_PATH/deployment/regional-s3-assets/ s3://$DIST_OUTPUT_BUCKET-$AWS_REGION/$SOLUTION_NAME/$VERSION/ --recursive --acl bucket-owner-full-control --profile $AWS_PROFILE
 ```
 
+## Deploying the customized solution
+* Get the link of the efs-to-efs-backup.template and efs-to-efs-restore.template uploaded to your Amazon S3 bucket.
+* Deploy the EFS Backup solution to your account by launching a new AWS CloudFormation stack using the link of the efs-to-efs-backup.template and efs-to-efs-restore.template.
 ***
 
-#### v1.3 changes
+Copyright 2017-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-```bash
-* parallel operations to improve removal of old backups
-* parallel operations to improve creation of hardlinks for backups
-* improving backup notifications
-* drop down options for backup window selection
-* instance size selection defaults to c5.xlarge
-* node.js runtime update to 8.10
-* DynamoDB Read/Write provisioned capacity units reduced to 2
-```
+Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
 
-***
+    http://www.apache.org/licenses/LICENSE-2.0
 
-#### v1.4 changes
-
-```bash
-* upgrading Python code from version 2.7 to 3.7
-* updated unit tests
-* making encryption/access control changes to log bucket to be consistent with best practices
-* where applicable, adding constraints for parameters to make them required
-* adding security group to outputs in backup and restore templates
-```
-
-***
-
-Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
-Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
-
-    http://aws.amazon.com/asl/
-
-or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and limitations under the License.
+or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
