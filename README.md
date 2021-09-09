@@ -63,6 +63,10 @@ aws s3 cp $EFS_BACKUP_PATH/deployment/regional-s3-assets/ s3://$DIST_OUTPUT_BUCK
 ## Deploying the customized solution
 * Get the link of the efs-to-efs-backup.template and efs-to-efs-restore.template uploaded to your Amazon S3 bucket.
 * Deploy the EFS Backup solution to your account by launching a new AWS CloudFormation stack using the link of the efs-to-efs-backup.template and efs-to-efs-restore.template.
+
+## Collection of operational metrics
+This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/collection-of-operational-metrics.html).
+
 ***
 
 Copyright 2017-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
